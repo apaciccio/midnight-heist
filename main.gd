@@ -1,5 +1,8 @@
-# ==== INIZIO FILE: copia da questa riga in giu' ====
-# main.gd - MIDNIGHT HEIST v3.53 (AUTOSPIN)
+
+# main.gd - MIDNIGHT HEIST v3.54 (SACCHI IN SCALA CON LA PUNTATA)
+# v3.54: il numero sui sacchi mostra il valore REALE alla puntata attuale
+#   (valore base x bet/10), coerente col bottino incassato.
+# v3.53.1: fix tipo di bonus_scattato
 # v3.53: pulsante AUTO sotto la griglia. Tap = scegli i giri (10/25/50/
 #   infinito); parte in automatico e si ferma quando finiscono, quando
 #   scatta un bonus, se il saldo non basta, o al tap su STOP. Durante
@@ -379,7 +382,7 @@ var col_strips: Array = []
 var reel_suspense := 1.0
 var sticky_illuminati: Array = []
 var dinamite_lanciata := false
-const DEMO_ATTIVA := true   # false prima della pubblicazione!
+const DEMO_ATTIVA := false   
 var demo_in_corso := false
 static var music_on := true
 static var sfx_on := true
@@ -860,12 +863,16 @@ func _set_cell(reel: int, row: int, sym: String, mult: int = 1, coin_val: int = 
 					c["label"].add_theme_font_size_override("font_size", 22)
 					c["label"].add_theme_color_override("font_color", JP_TXT[coin_val])
 			else:
+				# il valore mostrato e' quello REALE alla puntata attuale
+				var mostra := int(round(coin_val * float(_bet()) / float(SlotEngine.TOTAL_BET)))
 				if c.get("plate") != null:
 					# il numero sta DENTRO la placchetta; la label della cella resta vuota
-					c["plate"].get_meta("numlab").text = str(coin_val)
+					var nl: Label = c["plate"].get_meta("numlab")
+					nl.text = _fmt(mostra)
+					nl.add_theme_font_size_override("font_size", 21 if nl.text.length() <= 3 else (18 if nl.text.length() <= 5 else 15))
 					c["label"].text = ""
 				else:
-					c["label"].text = str(coin_val)
+					c["label"].text = _fmt(mostra)
 					c["label"].position = Vector2.ZERO
 					c["label"].size = c["panel"].size
 					c["label"].add_theme_font_size_override("font_size", 32)
@@ -1451,7 +1458,7 @@ func _on_spin_pressed() -> void:
 	if spin_hitbox: spin_hitbox.disabled = false
 	# AUTOSPIN: continua se attivo, ma fermati sui bonus e a saldo finito
 	if autospin_left != 0:
-		var bonus_scattato := result.has("cassaforte") or not result["free_spins"].is_empty() or result.has("scasso") or result.has("taglio") or result.has("rapina")
+		var bonus_scattato: bool = result.has("cassaforte") or (not result["free_spins"].is_empty()) or result.has("scasso") or result.has("taglio") or result.has("rapina")
 		if bonus_scattato or balance < _bet():
 			_autospin_stop()
 		else:
@@ -4007,5 +4014,3 @@ func _sfx(name: String) -> void:
 	var stream = _find_audio(name)
 	if stream == null: return
 	_play_limited(sfx_player, stream, name)
-
-
