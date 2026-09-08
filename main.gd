@@ -1,5 +1,101 @@
-
-# main.gd - MIDNIGHT HEIST v3.54 (SACCHI IN SCALA CON LA PUNTATA)
+# ==== INIZIO FILE: copia da questa riga in giu' ====
+# main.gd - MIDNIGHT HEIST v3.74 (CARICA DEI MEDAGLIONI VISIBILE)
+# v3.74: i medaglioni del Piano si caricano DAVVERO a vista. Con la
+#   matematica v0.19 lo sblocco arriva in media al 30-35% della carica
+#   piena, e la carica era disegnata lineare: si illuminava solo il terzo
+#   basso e poi esplodeva. Ora la carica mostrata segue una curva che sale
+#   in fretta e rallenta (allo sblocco tipico ~60-65%, oltre l'80% pulsa,
+#   il 100% solo all'esplosione), e prima di esplodere il medaglione si
+#   riempie fino in cima. Solo presentazione: motore e RTP intatti.
+# v3.73: durante l'autospin il tasto AUTO diventa l'immagine tasto_stop.png
+#   (stesso stile degli altri) e i giri rimasti stanno in un bollino tondo
+#   in alto a destra (bordo dorato, cifra dorata; "∞" per l'infinito).
+#   La targhetta rossa da codice resta solo come riserva se manca l'immagine.
+#   CHIUSURA V1: DBG_OVERLAY e DEMO_ATTIVA a false (via la scritta verde di
+#   diagnostica e il tasto D della demo).
+# v3.72: SPIN, TURBO, AUTO, MENU e il chip BET sono IMMAGINI in stile gioco
+#   (assets/tasto_spin.png, tasto_turbo_off.png, tasto_turbo_on.png,
+#   tasto_auto.png, tasto_menu.png, chip_bet.png). Gli automatismi restano:
+#   TURBO alterna l'immagine spenta/accesa (fiamme arancioni), AUTO durante
+#   l'autospin mostra una targhetta "STOP n" sopra l'immagine, il chip BET
+#   porta il numero della puntata e apre la schermata dei tagli. Se
+#   un'immagine manca, il tasto torna dorato dal codice (nessun crash).
+#   Layout: una riga sotto la griglia, TURBO - SPIN (grande) - AUTO - MENU.
+# v3.71: TURBO/AUTO/MENU disegnati dal codice come SPIN: gradiente dorato
+#   pieno, bordo chiaro, testo scuro in rilievo. TURBO acceso = piu' caldo.
+#   Non dipendono piu' dalle immagini btn_*.png (che erano sbiadite).
+# v3.70: la carica del medaglione riflette il pity timer (si riempie sul
+#   serio verso lo sblocco garantito); TURBO/AUTO/MENU disegnati dorati e
+#   pieni come SPIN (non piu' semitrasparenti).
+# v3.69: fix spin sovrapposti
+# v3.69: IL bug dei click a raffica. Dalla v3.56 il guardiano, uscendo dal
+#   suo ciclo perche' era iniziato un ALTRO spin, metteva spinning=false
+#   (riga fuori dall'if): un secondo dopo l'inizio di ogni spin il gioco
+#   si dichiarava fermo e il click successivo faceva partire un secondo
+#   spin sopra il primo -> strisce doppie, anelli accumulati, crash.
+#   Ora spinning=false solo quando il guardiano interviene davvero.
+# v3.68: tappe DBG dentro ogni bonus (Cassaforte, Colpo, Scasso, Taglio,
+#   Supremo, cerimonie, dialoghi) e tetto sui cicli che usano il delta.
+# v3.67: la cache delle texture procedurali viene svuotata all'uscita
+#   (niente "texture leaked" alla chiusura).
+# v3.66: CANCELLO: mentre lo spin e' in corso, un livello invisibile sopra
+#   tutta l'interfaccia intercetta OGNI tocco (chip della puntata, TURBO,
+#   MENU, medaglioni, AUTO...). Un tocco durante lo spin vale solo come
+#   "caduta rapida" (o STOP dell'autospin). I mini-giochi stanno sopra
+#   il cancello e ricevono i tocchi normalmente. E' la soluzione
+#   strutturale al "secondo tocco che arriva mentre il primo anima".
+# v3.65: se il saldo non basta per uno spin, dopo 1.5 s il gioco ricarica
+#   1.000 monete con un avviso (social casino; sull'app sara' il bonus
+#   giornaliero). Vale all'avvio e durante il gioco.
+# v3.64: nello Scasso e nel Taglio un tocco alla volta (i tap a raffica
+#   facevano partire due sequenze insieme: la seconda animava casseforti
+#   gia' eliminate -> crash main.gd:2183). Ogni uso di nodi dopo
+#   un'attesa e' protetto. Le animazioni a ciclo continuo delle scene
+#   (raggi della grande vincita) vengono fermate quando la scena muore.
+# v3.63: una striscia che ha l'ordine di fermarsi ma non atterra entro
+#   3 s atterra d'ufficio (scarica la coda e si posa). Niente rulli
+#   che girano all'infinito.
+# v3.62: il GUARDIANO scattava a meta' bonus (12 s senza "nutrimento",
+#   p.es. mentre il giocatore decide quale cassaforte toccare) e
+#   spazzava tutto -> caos, e al click dopo il vecchio spin toccava
+#   strisce gia' eliminate -> CRASH (main.gd:1791 nel rapporto macOS).
+#   Ora: il guardiano viene nutrito da OGNI attesa del gioco (_wait,
+#   _fine, cicli di attesa dei tap) e scatta solo dopo 60 s di vero
+#   silenzio; la striscia si elimina solo se esiste ancora.
+# v3.61: all'avvio il gioco disegna per 2 frame, invisibile, un esemplare
+#   di OGNI tipo di effetto (Polygon2D, Line2D, gradienti, label con
+#   contorno, veli, TextureRect modulati...) cosi' il browser compila
+#   tutti gli shader durante il caricamento e non piu' a meta' partita
+#   (= gli stalli di decine di secondi sul web). Tetti anche sui cicli
+#   is_running() della grande vincita e della manopola.
+# v3.60: NESSUNA attesa aspetta piu' un segnale "finished": tutte le 24
+#   attese di fine animazione passano per _fine(tween), che controlla
+#   is_running() e ha un tempo massimo. Anche le attese "finche' non
+#   succede X" (fasci degli attrezzi) hanno un tetto. Sul web il segnale
+#   di fine tween ogni tanto non arriva: era la causa dei blocchi.
+#   Anche 'await process_frame' -> timer di 16 ms (piu' affidabile sul web).
+# v3.59: le texture procedurali (aloni, anelli, spade di luce) si creano
+#   UNA volta per colore e si riusano: niente piu' texture nuove a ogni
+#   atterraggio (nel browser ingolfavano la grafica e la bloccavano per
+#   secondi). Salvataggio su disco ogni 5 spin invece che a ogni spin.
+# v3.58: sul web il TITOLO della scheda del browser mostra frame e fase
+#   ogni mezzo secondo (si aggiorna anche se la grafica si congela);
+#   _wait usa un timer breve invece del segnale di frame.
+# v3.57: DBG_OVERLAY: scritta in alto a sinistra con la fase esatta dello
+#   spin (per trovare i blocchi). Mettere false prima della pubblicazione.
+# v3.56: difese contro il blocco da pressioni rapide:
+#   - le attese sui rulli hanno un TEMPO MASSIMO (4 s): oltre, il rullo
+#     si forza a terra e si prosegue (niente attese infinite)
+#   - il rimbalzo d'atterraggio non aspetta piu' un segnale che potrebbe
+#     non arrivare (controlla se il tween e' ancora in corso)
+#   - delta-time dei rulli limitato a 50 ms (niente scatti dopo uno stallo)
+#   - i click a raffica su SPIN sono filtrati (uno ogni 120 ms)
+#   - WATCHDOG da 150 s a 12 s: se qualcosa muore, si sblocca subito
+# v3.55: salvataggio
+# v3.55: al cambio puntata gli attrezzi NON si azzerano: ogni livello ha
+#   i suoi contatori, che ritrovi tornando indietro. Monete e puntata
+#   si salvano sul dispositivo e si ritrovano riaprendo il gioco.
+# v3.54: sacchi in scala con la puntata
 # v3.54: il numero sui sacchi mostra il valore REALE alla puntata attuale
 #   (valore base x bet/10), coerente col bottino incassato.
 # v3.53.1: fix tipo di bonus_scattato
@@ -344,12 +440,21 @@ var turbo := false
 var cells: Array = []
 var textures := {}
 var jackpot_labels := {}
-var spin_button_node: TextureRect
-var spin_hitbox: Button
+var spin_button_node: TextureRect = null
+var spin_hitbox: BaseButton
 var turbo_tex: TextureRect
+var turbo_btn: BaseButton
+var turbo_tex_off: Texture2D = null
+var turbo_tex_on: Texture2D = null
+var bet_num_label: Label = null       # numero della puntata sopra il chip illustrato
+var auto_stop_plate: Control = null   # targhetta "STOP n" (riserva se manca tasto_stop.png)
+var auto_tex: Texture2D = null        # immagine AUTO a riposo
+var stop_tex: Texture2D = null        # immagine STOP durante l'autospin
+var auto_badge: Control = null        # bollino coi giri rimasti
+var auto_badge_label: Label = null
 var balance_label: Label
 var win_label: Label
-var bet_chip: Button
+var bet_chip: BaseButton
 var fs_banner: Label
 var fs_info: Label
 var mastermind_node: TextureRect
@@ -382,14 +487,53 @@ var col_strips: Array = []
 var reel_suspense := 1.0
 var sticky_illuminati: Array = []
 var dinamite_lanciata := false
-const DEMO_ATTIVA := false   
+const DEMO_ATTIVA := false   # true solo per provare i bonus col tasto D
+const DBG_OVERLAY := false   # true = scritta verde di diagnostica in alto a sinistra
+var dbg_label: Label = null
+var dbg_n := 0
+
+var dbg_fase := ""
+var dbg_frames := 0
+var dbg_acc := 0.0
+
+func _process(delta: float) -> void:
+	if not DBG_OVERLAY: return
+	dbg_frames += 1
+	dbg_acc += delta
+	if dbg_acc >= 0.5:
+		dbg_acc = 0.0
+		if OS.has_feature("web"):
+			JavaScriptBridge.eval("document.title='MH f=%d | %s | spin=%s'" % [dbg_frames, dbg_fase.replace("'", ""), str(spinning)])
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+		_tex_cache.clear()
+
+func _dbg(fase: String) -> void:
+	dbg_fase = fase
+	if not DBG_OVERLAY: return
+	if dbg_label == null or not is_instance_valid(dbg_label):
+		dbg_label = Label.new()
+		dbg_label.add_theme_font_size_override("font_size", 13)
+		dbg_label.add_theme_color_override("font_color", Color("#7fff7f"))
+		dbg_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		dbg_label.add_theme_constant_override("outline_size", 4)
+		dbg_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dbg_label.z_index = 200
+		add_child(dbg_label)
+		dbg_label.position = Vector2(6, 26)
+	dbg_n += 1
+	dbg_label.text = "DBG %d | %s | spinning=%s fastdrop=%s auto=%d t=%.1f" % [dbg_n, fase, str(spinning), str(request_fastdrop), autospin_left, Time.get_ticks_msec() / 1000.0]
+	print("DBG ", dbg_n, " ", fase)
 var demo_in_corso := false
 static var music_on := true
 static var sfx_on := true
 
 func _ready() -> void:
+	_carica_stato()
 	_load_textures()
 	_build_ui()
+	_riscalda_shader()
 	_fill_random_grid()
 	_audio_setup()
 
@@ -406,6 +550,29 @@ func _load_textures() -> void:
 	if ResourceLoader.exists("res://assets/mastermind_win.png"):
 		mm_win = load("res://assets/mastermind_win.png")
 
+func _tasto_dorato(testo: String, x: float, y: float, w: float, h: float, acceso: bool = false) -> Button:
+	var b := Button.new()
+	b.text = testo
+	b.size = Vector2(w, h); b.position = Vector2(x, y)
+	b.add_theme_font_size_override("font_size", 22)
+	for st in ["normal", "hover", "pressed", "disabled"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color("#e8b73a") if acceso else Color("#c9a24a")
+		sb.border_color = Color("#fff0b8")
+		sb.border_width_top = 2; sb.border_width_bottom = 3; sb.border_width_left = 2; sb.border_width_right = 2
+		sb.corner_radius_top_left = 12; sb.corner_radius_top_right = 12
+		sb.corner_radius_bottom_left = 12; sb.corner_radius_bottom_right = 12
+		sb.shadow_color = Color(0, 0, 0, 0.45); sb.shadow_size = 5; sb.shadow_offset = Vector2(0, 3)
+		if st == "hover": sb.bg_color = sb.bg_color.lightened(0.08)
+		if st == "pressed": sb.bg_color = sb.bg_color.darkened(0.10)
+		b.add_theme_stylebox_override(st, sb)
+	b.add_theme_color_override("font_color", Color("#2a1c05"))
+	b.add_theme_color_override("font_hover_color", Color("#2a1c05"))
+	b.add_theme_color_override("font_pressed_color", Color("#1a1204"))
+	b.add_theme_color_override("font_focus_color", Color("#2a1c05"))
+	add_child(b)
+	return b
+
 func _img(path: String, x: float, y: float, w: float, h: float) -> TextureRect:
 	if not ResourceLoader.exists(path): return null
 	var t := TextureRect.new()
@@ -415,6 +582,29 @@ func _img(path: String, x: float, y: float, w: float, h: float) -> TextureRect:
 	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	add_child(t)
 	return t
+
+# TASTO ILLUSTRATO: immagine in stile gioco (assets/<nome>); se manca, tasto
+# dorato dal codice con la scritta di riserva. Feedback alla pressione:
+# leggero scurimento e piccolo "schiacciamento".
+func _tasto_img(nome: String, riserva: String, x: float, y: float, w: float, h: float) -> BaseButton:
+	var path := "res://assets/%s" % nome
+	if not ResourceLoader.exists(path):
+		return _tasto_dorato(riserva, x, y, w, h)
+	var b := TextureButton.new()
+	b.texture_normal = load(path)
+	b.ignore_texture_size = true
+	b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	b.size = Vector2(w, h); b.position = Vector2(x, y)
+	b.pivot_offset = Vector2(w / 2.0, h / 2.0)
+	b.focus_mode = Control.FOCUS_NONE
+	b.button_down.connect(func():
+		if is_instance_valid(b):
+			b.modulate = Color(0.82, 0.82, 0.82); b.scale = Vector2(0.95, 0.95))
+	b.button_up.connect(func():
+		if is_instance_valid(b):
+			b.modulate = Color.WHITE; b.scale = Vector2.ONE)
+	add_child(b)
+	return b
 
 func _build_ui() -> void:
 	# sfondo pieno
@@ -554,13 +744,15 @@ func _build_ui() -> void:
 			clipper.position = Vector2(4, 4)
 			clipper.size = Vector2(CELL - 8, CELL - 8)
 			var sweep := TextureRect.new()
-			var sg := Gradient.new()
-			sg.colors = PackedColorArray([Color(1,1,1,0.0), Color(1,1,1,0.75), Color(1,1,1,0.0)])
-			sg.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
-			var st := GradientTexture2D.new()
-			st.gradient = sg; st.width = 64; st.height = 8
-			st.fill_from = Vector2(0, 0.5); st.fill_to = Vector2(1, 0.5)
-			sweep.texture = st
+			if not _tex_cache.has("sweep"):
+				var sg := Gradient.new()
+				sg.colors = PackedColorArray([Color(1,1,1,0.0), Color(1,1,1,0.75), Color(1,1,1,0.0)])
+				sg.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+				var st := GradientTexture2D.new()
+				st.gradient = sg; st.width = 64; st.height = 8
+				st.fill_from = Vector2(0, 0.5); st.fill_to = Vector2(1, 0.5)
+				_tex_cache["sweep"] = st
+			sweep.texture = _tex_cache["sweep"]
 			sweep.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			sweep.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			sweep.visible = false
@@ -652,77 +844,140 @@ func _build_ui() -> void:
 	fs_info.add_theme_constant_override("outline_size", 6)
 	add_child(fs_info)
 
-	# --- controlli: bet, spin, turbo, menu ---
-	var ctrl_x := GRID_X + GRID_W + 20
-	# --- PUNTATA A CHIP: un bottone dorato apre i tagli ---
-	bet_chip = Button.new()
-	bet_chip.add_theme_font_size_override("font_size", 17)
-	bet_chip.add_theme_color_override("font_color", Color("#2a1c05"))
-	var chsb := StyleBoxFlat.new()
-	chsb.bg_color = Color("#e3a93c")
-	chsb.corner_radius_top_left = 44; chsb.corner_radius_top_right = 44
-	chsb.corner_radius_bottom_left = 44; chsb.corner_radius_bottom_right = 44
-	chsb.border_width_top = 3; chsb.border_width_bottom = 3
-	chsb.border_width_left = 3; chsb.border_width_right = 3
-	chsb.border_color = Color("#ffe89a")
-	chsb.shadow_color = Color(0, 0, 0, 0.55); chsb.shadow_size = 6; chsb.shadow_offset = Vector2(0, 4)
-	bet_chip.add_theme_stylebox_override("normal", chsb)
-	var chsh := chsb.duplicate(); chsh.bg_color = Color("#ffc85a")
-	bet_chip.add_theme_stylebox_override("hover", chsh)
-	add_child(bet_chip)
-	# chip rotondo, a destra della griglia
-	bet_chip.position = Vector2(GRID_X + GRID_W + 14, below - 30)
-	bet_chip.size = Vector2(88, 88)
+	# --- controlli: bet, spin, turbo, auto, menu (ILLUSTRATI, v3.72) ---
+	# --- PUNTATA A CHIP: chip illustrato (chip_bet.png) col numero sopra; apre i tagli ---
+	var chip_lato := 96.0
+	bet_chip = _tasto_img("chip_bet.png", "", GRID_X + GRID_W + 10, below - 34, chip_lato, chip_lato)
+	if bet_chip is TextureButton:
+		# numero della puntata nella parte bassa del chip (la parola BET e' nel disegno)
+		bet_num_label = _etichetta("", 21, Color("#2a1c05"), Color("#ffe9a8"), 5)
+		bet_num_label.position = Vector2(0, chip_lato * 0.60)
+		bet_num_label.size = Vector2(chip_lato, chip_lato * 0.26)
+		bet_chip.add_child(bet_num_label)
+	else:
+		# riserva dorata rotonda (come v3.71)
+		bet_chip.add_theme_font_size_override("font_size", 17)
+		bet_chip.add_theme_color_override("font_color", Color("#2a1c05"))
+		var chsb := StyleBoxFlat.new()
+		chsb.bg_color = Color("#e3a93c")
+		chsb.corner_radius_top_left = 48; chsb.corner_radius_top_right = 48
+		chsb.corner_radius_bottom_left = 48; chsb.corner_radius_bottom_right = 48
+		chsb.border_width_top = 3; chsb.border_width_bottom = 3
+		chsb.border_width_left = 3; chsb.border_width_right = 3
+		chsb.border_color = Color("#ffe89a")
+		chsb.shadow_color = Color(0, 0, 0, 0.55); chsb.shadow_size = 6; chsb.shadow_offset = Vector2(0, 4)
+		bet_chip.add_theme_stylebox_override("normal", chsb)
+		var chsh := chsb.duplicate(); chsh.bg_color = Color("#ffc85a")
+		bet_chip.add_theme_stylebox_override("hover", chsh)
 	bet_chip.pressed.connect(_apri_bet_schermo)
 	hud_nodes.append(bet_chip)
 	_update_bet_label()
 
-	# SPIN (immagine) centrato sotto la griglia
-	var spin_x := GRID_X + (GRID_W - 190) / 2.0
-	spin_button_node = _img("res://assets/btn_spin.png", spin_x, below + 66, 190, 84)
-	spin_hitbox = Button.new(); spin_hitbox.flat = true
-	spin_hitbox.size = Vector2(190, 84); spin_hitbox.position = Vector2(spin_x, below + 66)
+	# RIGA DEI TASTI sotto la griglia, centrata: TURBO - SPIN (grande) - AUTO - MENU
+	var lato_piccolo := 80.0
+	var lato_spin := 100.0
+	var gap_tasti := 26.0
+	var riga_y := below + 66          # bordo alto della riga (SPIN)
+	var tot_w := lato_piccolo * 3 + lato_spin + gap_tasti * 3
+	var x0 := GRID_X + (GRID_W - tot_w) / 2.0
+	var cy := riga_y + lato_spin / 2.0    # asse orizzontale della riga
+	var turbo_x := x0
+	var spin_x := x0 + lato_piccolo + gap_tasti
+	var auto_x := spin_x + lato_spin + gap_tasti
+	var menu_x := auto_x + lato_piccolo + gap_tasti
+
+	# SPIN (illustrato) al centro
+	spin_hitbox = _tasto_img("tasto_spin.png", "SPIN", spin_x, riga_y, lato_spin, lato_spin)
 	spin_hitbox.pressed.connect(_on_spin_pressed)
-	add_child(spin_hitbox)
-	if spin_button_node != null: hud_nodes.append(spin_button_node)
+	if spin_hitbox is Button: spin_hitbox.add_theme_font_size_override("font_size", 26)
 	hud_nodes.append(spin_hitbox)
-	if spin_button_node == null:
-		spin_hitbox.flat = false; spin_hitbox.text = "SPIN"
-		spin_hitbox.add_theme_font_size_override("font_size", 30)
 
-	# TURBO (immagine)
-	turbo_tex = _img("res://assets/btn_turbo_off.png", spin_x - 170, below + 78, 150, 60)
-	var turbo_hit := Button.new(); turbo_hit.flat = true
-	turbo_hit.size = Vector2(150, 60); turbo_hit.position = Vector2(spin_x - 170, below + 78)
-	turbo_hit.pressed.connect(_on_turbo_pressed); add_child(turbo_hit)
-	if turbo_tex != null: hud_nodes.append(turbo_tex)
-	hud_nodes.append(turbo_hit)
+	# TURBO (illustrato, due stati). L'immagine ACCESA ha le fiamme che escono
+	# dal corpo del tasto: verde.py --tasti salva on/off sulla STESSA tela,
+	# quindi il rettangolo del tasto e' piu' largo del corpo. Quanto, lo
+	# misuro dall'immagine spenta (corpo = pixel non trasparenti), cosi' il
+	# corpo del TURBO risulta grande come gli altri tasti e l'accensione non
+	# sposta nulla.
+	var turbo_w := lato_piccolo
+	if ResourceLoader.exists("res://assets/tasto_turbo_off.png"):
+		turbo_tex_off = load("res://assets/tasto_turbo_off.png")
+		turbo_tex_on = load("res://assets/tasto_turbo_on.png") if ResourceLoader.exists("res://assets/tasto_turbo_on.png") else turbo_tex_off
+		var im: Image = turbo_tex_off.get_image()
+		if im != null and not im.is_empty():
+			var corpo := im.get_used_rect()
+			if corpo.size.x > 0:
+				turbo_w = lato_piccolo * clampf(float(im.get_width()) / float(corpo.size.x), 1.0, 1.8)
+	turbo_btn = _tasto_img("tasto_turbo_off.png", "TURBO", turbo_x + (lato_piccolo - turbo_w) / 2.0, cy - turbo_w / 2.0, turbo_w, turbo_w)
+	turbo_btn.pressed.connect(_on_turbo_pressed)
+	hud_nodes.append(turbo_btn)
+	_turbo_refresh()
 
-	# AUTO (a destra di SPIN, sopra MENU)
-	auto_button = Button.new()
-	auto_button.flat = false
-	var asb := StyleBoxFlat.new()
-	asb.bg_color = Color(0.08, 0.10, 0.16, 0.95); asb.border_color = Color("#f5b73f")
-	asb.border_width_top = 2; asb.border_width_bottom = 2; asb.border_width_left = 2; asb.border_width_right = 2
-	asb.corner_radius_top_left = 12; asb.corner_radius_top_right = 12; asb.corner_radius_bottom_left = 12; asb.corner_radius_bottom_right = 12
-	auto_button.add_theme_stylebox_override("normal", asb)
-	auto_button.add_theme_stylebox_override("hover", asb)
-	auto_button.add_theme_stylebox_override("pressed", asb)
-	auto_button.add_theme_font_size_override("font_size", 20)
-	auto_button.add_theme_color_override("font_color", Color("#f5b73f"))
-	auto_button.text = "AUTO"
-	auto_button.size = Vector2(150, 60); auto_button.position = Vector2(spin_x + 210, below + 78)
+	# AUTO (illustrato) a destra di SPIN; durante l'autospin porta la targhetta STOP n
+	auto_button = _tasto_img("tasto_auto.png", "AUTO", auto_x, cy - lato_piccolo / 2.0, lato_piccolo, lato_piccolo)
 	auto_button.pressed.connect(_on_auto_pressed)
-	add_child(auto_button); hud_nodes.append(auto_button)
+	if auto_button is TextureButton:
+		auto_stop_plate = Control.new()
+		auto_stop_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		auto_stop_plate.size = Vector2(lato_piccolo, lato_piccolo)
+		var pl := Panel.new()
+		pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var psb := StyleBoxFlat.new()
+		psb.bg_color = Color(0.20, 0.03, 0.03, 1.0)
+		psb.border_color = Color("#ff9a3c"); psb.set_border_width_all(2)
+		psb.set_corner_radius_all(int(lato_piccolo * 0.18))
+		pl.add_theme_stylebox_override("panel", psb)
+		pl.position = Vector2(lato_piccolo * 0.06, lato_piccolo * 0.08)
+		pl.size = Vector2(lato_piccolo * 0.88, lato_piccolo * 0.84)
+		auto_stop_plate.add_child(pl)
+		auto_label = _etichetta("", 20, Color("#ff6b6b"), Color("#2a0505"), 5)
+		auto_label.size = Vector2(lato_piccolo, lato_piccolo)
+		auto_stop_plate.add_child(auto_label)
+		auto_stop_plate.visible = false
+		auto_button.add_child(auto_stop_plate)
+		# STOP illustrato + bollino del conteggio (in alto a destra, sporge un po')
+		auto_tex = load("res://assets/tasto_auto.png")
+		if ResourceLoader.exists("res://assets/tasto_stop.png"):
+			stop_tex = load("res://assets/tasto_stop.png")
+			var d := 32.0
+			auto_badge = Control.new()
+			auto_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			auto_badge.position = Vector2(lato_piccolo - d + 8.0, -8.0)
+			auto_badge.size = Vector2(d, d)
+			var cerchio := Panel.new()
+			cerchio.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var csb := StyleBoxFlat.new()
+			csb.bg_color = Color("#1a0a05")
+			csb.border_color = Color("#ffd77a"); csb.set_border_width_all(2)
+			csb.set_corner_radius_all(int(d / 2.0))
+			csb.shadow_color = Color(0, 0, 0, 0.5); csb.shadow_size = 3; csb.shadow_offset = Vector2(0, 2)
+			cerchio.add_theme_stylebox_override("panel", csb)
+			cerchio.size = Vector2(d, d)
+			auto_badge.add_child(cerchio)
+			auto_badge_label = _etichetta("", 15, Color("#ffe9a8"), Color("#2a1505"), 3)
+			auto_badge_label.size = Vector2(d, d)
+			auto_badge.add_child(auto_badge_label)
+			auto_badge.visible = false
+			auto_button.add_child(auto_badge)
+	hud_nodes.append(auto_button)
 
-	# MENU (immagine) - spostato piu' a destra per far posto ad AUTO
-	var menu_img := _img("res://assets/btn_menu.png", spin_x + 372, below + 78, 130, 60)
-	if menu_img != null: hud_nodes.append(menu_img)
-	var menu_hit := Button.new(); menu_hit.flat = true
-	menu_hit.size = Vector2(130, 60); menu_hit.position = Vector2(spin_x + 372, below + 78)
-	menu_hit.pressed.connect(func(): get_tree().change_scene_to_file("res://menu.tscn"))
-	add_child(menu_hit)
-	hud_nodes.append(menu_hit)
+	# MENU (illustrato)
+	var menu_btn := _tasto_img("tasto_menu.png", "MENU", menu_x, cy - lato_piccolo / 2.0, lato_piccolo, lato_piccolo)
+	menu_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://menu.tscn"))
+	hud_nodes.append(menu_btn)
+
+	# CANCELLO DEI TOCCHI: sopra tutta l'interfaccia, attivo solo durante lo spin
+	input_gate = Control.new()
+	input_gate.name = "input_gate"
+	input_gate.mouse_filter = Control.MOUSE_FILTER_STOP
+	input_gate.size = Vector2(VW, VH)
+	input_gate.visible = false
+	input_gate.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventMouseButton and ev.pressed) or (ev is InputEventScreenTouch and ev.pressed):
+			if autospin_left != 0:
+				_autospin_stop()
+			else:
+				_on_spin_pressed())
+	add_child(input_gate)
 
 # fast-drop: barra spaziatrice
 func _unhandled_input(event: InputEvent) -> void:
@@ -736,7 +991,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _update_balance() -> void: balance_label.text = "%s: %d" % [T("monete"), balance]
 func _update_bet_label() -> void:
-	bet_chip.text = "%s\n%d" % [T("bet"), _bet()]
+	if bet_num_label != null and is_instance_valid(bet_num_label):
+		bet_num_label.text = str(_bet())
+	elif bet_chip is Button:
+		bet_chip.text = "%s\n%d" % [T("bet"), _bet()]
 	# i jackpot scalano con la puntata
 	for jf in JACKPOT_BASE.keys():
 		if jackpot_labels.has(jf):
@@ -810,15 +1068,60 @@ func _scegli_bet(i: int) -> void:
 	if bet_index != i:
 		bet_index = i
 		_update_bet_label()
-		engine.azzera_lavagna()
+		engine.cambia_livello(i)   # ogni puntata ha la sua lavagna
 		_refresh_piano(true)
+		_salva_stato()
 	_chiudi_bet_schermo()
+
+# ---------- SALVATAGGIO DI MONETE E PUNTATA ----------
+const STATO_SAVE_PATH := "user://midnight_stato.cfg"
+var spin_dal_salvataggio := 0
+
+var ricarica_in_corso := false
+
+func _ricarica_cortesia() -> void:
+	# monete di cortesia quando il saldo non basta (sull'app: bonus giornaliero)
+	if ricarica_in_corso: return
+	ricarica_in_corso = true
+	await get_tree().create_timer(1.5).timeout
+	if balance < _bet():
+		balance = 1000
+		_update_balance()
+		_salva_stato()
+		_targa_banner(T("ricarica"), Color("#f5b73f"), 1.6)
+		_burst_money(14)
+	ricarica_in_corso = false
+
+func _salva_stato() -> void:
+	var cf := ConfigFile.new()
+	cf.set_value("stato", "balance", balance)
+	cf.set_value("stato", "bet_index", bet_index)
+	cf.save(STATO_SAVE_PATH)
+
+func _carica_stato() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(STATO_SAVE_PATH) == OK:
+		balance = int(cf.get_value("stato", "balance", balance))
+		bet_index = clampi(int(cf.get_value("stato", "bet_index", 0)), 0, BET_LEVELS.size() - 1)
+		if balance < BET_LEVELS[bet_index]:
+			balance = 1000   # ripartenza: monete di cortesia se non puoi spinnare
+	# la lavagna del motore deve essere quella di QUESTO livello
+	if engine.lavagna_livello != bet_index:
+		engine.cambia_livello(bet_index)
 
 func _on_turbo_pressed() -> void:
 	turbo = not turbo
-	if turbo_tex:
-		var p := "res://assets/btn_turbo_on.png" if turbo else "res://assets/btn_turbo_off.png"
-		if ResourceLoader.exists(p): turbo_tex.texture = load(p)
+	_turbo_refresh()
+
+func _turbo_refresh() -> void:
+	if turbo_btn == null or not is_instance_valid(turbo_btn): return
+	if turbo_btn is TextureButton:
+		var tx: Texture2D = turbo_tex_on if turbo else turbo_tex_off
+		if tx != null:
+			turbo_btn.texture_normal = tx
+	elif turbo_btn is Button:
+		var sb: StyleBoxFlat = turbo_btn.get_theme_stylebox("normal")
+		if sb != null: sb.bg_color = Color("#ff9a3c") if turbo else Color("#c9a24a")
 
 func _set_cell(reel: int, row: int, sym: String, mult: int = 1, coin_val: int = 0) -> void:
 	var c: Dictionary = cells[reel][row]
@@ -973,8 +1276,15 @@ func _build_piano_medaglioni() -> void:
 	_refresh_piano(false)
 
 func _piano_set_fill(tk: String, count: int, animate: bool) -> void:
-	# carica misteriosa: sale sempre, non arriva mai al pieno da sola
-	_piano_apply_frac(tk, 1.0 - pow(0.93, count), animate)
+	_piano_apply_frac(tk, _piano_frac_visibile(tk, count), animate)
+
+# carica misteriosa: sale sempre, non arriva mai al pieno da sola.
+# Curva 0.96 * (1 - e^(-3x)) con x = pezzi / CARICA_PIENA:
+#   x=0.10 -> 25%   x=0.35 (sblocco tipico) -> 62%   x=0.55 -> 78% (pulsa)   x=1 -> 91%
+func _piano_frac_visibile(tk: String, count: int) -> float:
+	if count <= 0: return 0.0
+	var x := float(count) / float(SlotEngine.CARICA_PIENA[tk])
+	return clampf(0.96 * (1.0 - exp(-3.0 * x)), 0.0, 0.96)
 
 func _piano_apply_frac(tk: String, f: float, animate: bool) -> void:
 	var med: Dictionary = piano_med[tk]
@@ -1085,7 +1395,7 @@ func _fly_from(start: Vector2, tk: String) -> void:
 	var tme := 0.0
 	var frame_i := 0
 	while tme < dur:
-		await get_tree().process_frame
+		await get_tree().create_timer(0.016).timeout
 		if not is_instance_valid(streak):
 			return
 		var dt := get_process_delta_time()
@@ -1128,7 +1438,10 @@ func _fly_from(start: Vector2, tk: String) -> void:
 func _explode_medallion(tk: String) -> void:
 	_telegraph_stop(tk)
 	var med: Dictionary = piano_med[tk]
-	_piano_apply_frac(tk, 1.0, false)   # pieno per un attimo
+	# si riempie fino in cima A VISTA, poi scoppia
+	_piano_apply_frac(tk, 1.0, true)
+	await get_tree().create_timer(0.45).timeout
+	if not is_instance_valid(med["back"]): return
 	_sfx("sfx_jackpot")
 	var back: Control = med["back"]
 	var tw := create_tween()
@@ -1150,7 +1463,7 @@ func _explode_medallion(tk: String) -> void:
 		st.tween_property(s, "position", s.position + Vector2(cos(ang), sin(ang)) * dist, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		st.tween_property(s, "modulate:a", 0.0, 0.5)
 		st.chain().tween_callback(s.queue_free)
-	await tw.finished
+	await _fine(tw)
 	_piano_set_fill(tk, engine.lavagna[tk], true)   # scende all'avanzo (carry-over)
 
 func _tint_reel(reel: int, tint: Color) -> void:
@@ -1184,20 +1497,30 @@ func _spazza_scene() -> void:
 	reel_suspense = 1.0
 
 var spin_watchdog_id := 0
+var input_gate: Control = null
 var autospin_left := 0        # 0 = spento; -1 = infinito
-var auto_button: Button = null
+var auto_button: BaseButton = null
 var auto_label: Label = null
 
+var watchdog_nutrito := 0.0
+
+func _nutri_watchdog() -> void:
+	watchdog_nutrito = Time.get_ticks_msec() / 1000.0
+
 func _watchdog(id: int) -> void:
-	# se dopo 150 s lo spin non e' finito, qualcosa e' morto: sblocco e ripulisco
-	await get_tree().create_timer(150.0).timeout
+	# se per 60 s non c'e' NESSUNA attivita', qualcosa e' morto: sblocco e ripulisco
+	_nutri_watchdog()
+	while spinning and spin_watchdog_id == id:
+		await get_tree().create_timer(1.0).timeout
+		if Time.get_ticks_msec() / 1000.0 - watchdog_nutrito > 60.0:
+			break
 	if spinning and spin_watchdog_id == id:
 		push_warning("WATCHDOG: spin bloccato, sblocco forzato")
 		_spazza_scene()
 		_tint_all(Color.WHITE)
 		_bonus_exit_forzata()
-		_spazza_scene()
-	spinning = false
+		if input_gate != null: input_gate.visible = false
+		spinning = false
 
 func _bonus_exit_forzata() -> void:
 	grid_root.position = Vector2(GRID_X, GRID_Y)
@@ -1254,29 +1577,55 @@ func _autospin_stop() -> void:
 	_autospin_refresh()
 
 func _autospin_refresh() -> void:
-	if auto_button == null: return
-	if autospin_left == 0:
-		auto_button.text = "AUTO"
-		auto_button.add_theme_color_override("font_color", Color("#f5b73f"))
-	elif autospin_left < 0:
-		auto_button.text = "STOP ∞"
-		auto_button.add_theme_color_override("font_color", Color("#ff6b6b"))
-	else:
-		auto_button.text = "STOP %d" % autospin_left
-		auto_button.add_theme_color_override("font_color", Color("#ff6b6b"))
+	if auto_button == null or not is_instance_valid(auto_button): return
+	var testo := ""
+	if autospin_left < 0: testo = "STOP ∞"
+	elif autospin_left > 0: testo = "STOP %d" % autospin_left
+	if stop_tex != null and auto_button is TextureButton:
+		# STOP illustrato: scambio l'immagine e mostro il bollino coi giri rimasti
+		var tb := auto_button as TextureButton
+		tb.texture_normal = stop_tex if autospin_left != 0 else auto_tex
+		if auto_badge != null and is_instance_valid(auto_badge):
+			auto_badge.visible = (autospin_left != 0)
+			if auto_badge_label != null and is_instance_valid(auto_badge_label):
+				auto_badge_label.text = "∞" if autospin_left < 0 else str(autospin_left)
+				auto_badge_label.add_theme_font_size_override("font_size", 15 if autospin_left < 100 else 12)
+		if auto_stop_plate != null and is_instance_valid(auto_stop_plate): auto_stop_plate.visible = false
+		return
+	if auto_stop_plate != null and is_instance_valid(auto_stop_plate):
+		# riserva: targhetta STOP sopra l'immagine (a due righe)
+		auto_stop_plate.visible = (autospin_left != 0)
+		# il tasto sotto si scurisce (self_modulate: la targhetta figlia non ne risente)
+		auto_button.self_modulate = Color(0.35, 0.35, 0.35) if autospin_left != 0 else Color.WHITE
+		if auto_label != null and is_instance_valid(auto_label):
+			auto_label.text = testo.replace(" ", "\n")
+		return
+	if auto_button is Button:
+		if autospin_left == 0:
+			auto_button.text = "AUTO"
+			auto_button.add_theme_color_override("font_color", Color("#f5b73f"))
+		else:
+			auto_button.text = testo
+			auto_button.add_theme_color_override("font_color", Color("#ff6b6b"))
 
 func _on_spin_pressed() -> void:
 	# doppio click = fast drop
 	var now := Time.get_ticks_msec() / 1000.0
 	if spinning:
+		if now - last_spin_click < 0.12:
+			return   # raffica: ignoro le pressioni troppo ravvicinate
 		if now - last_spin_click < 0.5:
 			request_fastdrop = true
 		last_spin_click = now
 		return
 	last_spin_click = now
 	if balance < _bet():
-		win_label.text = T("finite"); return
+		win_label.text = T("finite")
+		_ricarica_cortesia()
+		return
 	spinning = true; request_fastdrop = false
+	if input_gate != null: input_gate.visible = true
+	_dbg("A inizio spin")
 	if sfx_on:
 		var sp = _find_audio("sfx_spin")
 		if sp != null:
@@ -1288,6 +1637,7 @@ func _on_spin_pressed() -> void:
 
 	var scale := float(_bet()) / float(SlotEngine.TOTAL_BET)
 	var result: Dictionary = engine.play_spin()
+	_dbg("B esito calcolato")
 	var final_grid: Array = result["grid"]
 
 	_chiudi_bet_schermo()
@@ -1296,11 +1646,15 @@ func _on_spin_pressed() -> void:
 	_watchdog(spin_watchdog_id)
 	# rete di sicurezza: nessuna striscia orfana deve sopravvivere
 	for sv in col_strips:
-		if sv is Dictionary and is_instance_valid(sv.get("win")):
-			sv["win"].queue_free()
+		if sv is Dictionary:
+			sv["finished"] = true
+			sv["stopping"] = true
+			if is_instance_valid(sv.get("win")):
+				sv["win"].queue_free()
 	col_strips.clear()
 	reel_suspense = 1.0
 	_reels_start_all()
+	_dbg("C rulli partiti")
 	# la macchina lo sa: se uno sblocco arrivera', il medaglione freme
 	if result.has("scasso") or result.has("super"): _telegraph_start("TOOL_RED")
 	if result.has("taglio") or result.has("super"): _telegraph_start("TOOL_GREEN")
@@ -1311,7 +1665,9 @@ func _on_spin_pressed() -> void:
 	var scatters := 0
 	var sacchi := 0
 	for reel in REELS:
+		_dbg("D stop rullo %d..." % reel)
 		await _reel_stop(reel, final_grid, result["mults"], result["coins"], result.get("grid_pre"), result.get("espansi", []))
+		_dbg("D rullo %d a terra" % reel)
 		for row in ROWS:
 			if final_grid[reel][row] == "SCATTER": scatters += 1
 			elif final_grid[reel][row] == "COIN": sacchi += 1
@@ -1365,10 +1721,12 @@ func _on_spin_pressed() -> void:
 					reel_suspense = minf(reel_suspense, 0.6)
 					gap = maxf(gap, 0.65)
 			# le attese di suspense NON vengono accorciate
+			_dbg("D%d attesa gap=%.2f" % [reel, gap])
 			if gap > STOP_GAP_STRIP:
 				await get_tree().create_timer(gap).timeout
 			else:
 				await _wait(gap)
+			_dbg("D%d attesa finita" % reel)
 	reel_suspense = 1.0
 	if verita_lay != null:
 		await _momento_verita_fine()
@@ -1401,8 +1759,10 @@ func _on_spin_pressed() -> void:
 				var sky := Vector2(randf_range(240.0, 720.0), -40.0)
 				_fly_tracked(sky, result["pioggia"]["colore"], stato, bi * 0.08)
 				bi += 1
-		while stato["fatti"] < n_beams:
-			await get_tree().process_frame
+		var t_fasci := 0.0
+		while stato["fatti"] < n_beams and t_fasci < 6.0:
+			t_fasci += 0.05
+			await get_tree().create_timer(0.016).timeout
 		for tc in tool_cells:
 			cells[tc[0]][tc[1]]["panel"].modulate = Color.WHITE
 		# le cariche salgono (pezzi visti ora: rulli base + pioggia;
@@ -1419,15 +1779,18 @@ func _on_spin_pressed() -> void:
 		await get_tree().create_timer(0.25).timeout
 
 	var base_win := int(round((result["base"]["line_win"] + result["base"]["scatter_win"]) * scale))
+	_dbg("E vincita valutata")
 	if base_win > 0:
 		_flash(_winning_cells_of(final_grid, result["base"]))
 		if base_win >= _bet() * 15:
 			await _celebra_vincita(base_win)
+			_dbg("F celebrazione finita")
 		await _count_up(T("bottino"), base_win, _t(1.0))
 		balance += base_win; _update_balance()
 	elif result.has("cassaforte") == false and result["free_spins"].is_empty():
 		win_label.text = T("fallito")
 
+	_dbg("G prima dei bonus")
 	if result.has("cassaforte"): await _play_cassaforte(result, scale)
 	if result["free_spins"].size() > 0: await _play_heist(result, scale)
 	if result.has("super") and result.has("scasso") and result.has("taglio") and result.has("rapina"):
@@ -1454,7 +1817,12 @@ func _on_spin_pressed() -> void:
 		if mm_idle_frames.size() < 2:
 			mastermind_node.texture = mm_normal
 	_play_music("music_base")
+	if input_gate != null: input_gate.visible = false
 	spinning = false
+	spin_dal_salvataggio += 1
+	if spin_dal_salvataggio >= 5:
+		spin_dal_salvataggio = 0
+		_salva_stato()
 	if spin_hitbox: spin_hitbox.disabled = false
 	# AUTOSPIN: continua se attivo, ma fermati sui bonus e a saldo finito
 	if autospin_left != 0:
@@ -1471,9 +1839,67 @@ func _on_spin_pressed() -> void:
 					_on_spin_pressed()
 
 # attesa che si interrompe col fast-drop
+# attesa ROBUSTA della fine di un tween: controlla, non aspetta un segnale; tetto di sicurezza
+func _fine(tw: Tween, max_s: float = 6.0) -> void:
+	var t := 0.0
+	while is_instance_valid(tw) and tw.is_valid() and tw.is_running() and t < max_s:
+		_nutri_watchdog()
+		await get_tree().create_timer(0.016).timeout
+		t += 0.016
+
+# ================= RISCALDAMENTO SHADER (web) =================
+# Disegna una volta, quasi invisibile, ogni tipo di elemento grafico usato
+# dagli effetti: le compilazioni degli shader avvengono ORA e mai in gioco.
+func _riscalda_shader() -> void:
+	var lay := Node2D.new()
+	add_child(lay)
+	lay.z_index = 150
+	lay.modulate = Color(1, 1, 1, 0.02)
+	# poligono (raggi, puntatore, disco di ripiego)
+	var poly := Polygon2D.new()
+	poly.polygon = PackedVector2Array([Vector2(0,0), Vector2(60,10), Vector2(30,60), Vector2(-20,40)])
+	poly.color = Color("#ffd700")
+	lay.add_child(poly); poly.position = Vector2(200, 200)
+	# linea (bordi della manopola, tacche)
+	var ln := Line2D.new()
+	ln.points = PackedVector2Array([Vector2(0,0), Vector2(80,20), Vector2(120,0)])
+	ln.width = 4.0; ln.default_color = Color("#f5b73f")
+	lay.add_child(ln); ln.position = Vector2(300, 200)
+	# gradienti radiali (aloni, anelli, vignetta) e lineare (spada di luce)
+	for tx in [_glow_texture(Color("#ffd700")), _glow_texture(Color("#ff5252")), _glow_texture(Color("#3a6fd8")), _ring_texture(Color("#ffd700")), _ring_texture(Color("#ff7a1c"))]:
+		var tr := TextureRect.new()
+		tr.texture = tx; tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		lay.add_child(tr); tr.size = Vector2(64, 64); tr.position = Vector2(400, 200)
+		tr.modulate = Color(1.5, 1.2, 0.8, 0.5)   # modulate > 1: variante shader dei lampeggi
+	# texture del gioco con modulate/rotazione/scala (celle, monete, frame)
+	var keys := ["fx_coin", "diamante", "frammento", "disco_cassaforte", "sacco_plate", "banner_targa", "banner_scena", "targa_jackpot", "med_frame", "scasso_cassaforte_chiusa", "scasso_polizia", "sfondo_colpo", "mastermind_talk", "mastermind_lancio", "mastermind_furia", "mastermind_win_coins"]
+	for k in keys:
+		var p := "res://assets/%s.png" % k
+		if ResourceLoader.exists(p):
+			var t2 := TextureRect.new()
+			t2.texture = load(p); t2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			t2.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			lay.add_child(t2); t2.size = Vector2(48, 48); t2.position = Vector2(500, 200)
+			t2.rotation_degrees = 15.0; t2.modulate = Color(0.6, 0.6, 0.7)
+	for k in textures.keys():
+		var t3 := TextureRect.new()
+		t3.texture = textures[k]; t3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		lay.add_child(t3); t3.size = Vector2(32, 32); t3.position = Vector2(560, 200)
+	# rettangoli colorati (veli, pannelli), pannelli con StyleBox (targhe, luci), label con contorno
+	var cr := ColorRect.new(); cr.color = Color(0, 0, 0, 0.5); lay.add_child(cr); cr.size = Vector2(80, 40); cr.position = Vector2(640, 200)
+	var pn := Panel.new(); var sb := StyleBoxFlat.new(); _stile_targa(sb, Color("#c8501c"), Color("#ffd27a"), 20)
+	pn.add_theme_stylebox_override("panel", sb); lay.add_child(pn); pn.size = Vector2(80, 40); pn.position = Vector2(740, 200)
+	var lb := _etichetta("x27 1.000", 40, Color("#ffd700"), Color("#5a1a05"), 16); lay.add_child(lb); lb.position = Vector2(200, 300); lb.size = Vector2(300, 60)
+	var rt := RichTextLabel.new(); rt.bbcode_enabled = true; rt.text = "[color=#ffd700]w[/color]"; lay.add_child(rt); rt.size = Vector2(40, 30); rt.position = Vector2(520, 300)
+	# due frame di disegno, poi via tutto
+	await get_tree().create_timer(0.05).timeout
+	await get_tree().create_timer(0.05).timeout
+	lay.queue_free()
+
 func _wait(seconds: float) -> void:
+	_nutri_watchdog()
 	if request_fastdrop:
-		await get_tree().process_frame
+		await get_tree().create_timer(0.02).timeout
 		return
 	await get_tree().create_timer(_t(seconds)).timeout
 
@@ -1531,7 +1957,7 @@ func _strip_shift(s: Dictionary, coins_only: bool) -> void:
 
 func _strip_run(s: Dictionary, speed: float, coins_only: bool = false) -> void:
 	while true:
-		await get_tree().process_frame
+		await get_tree().create_timer(0.016).timeout
 		if not is_instance_valid(s["win"]):
 			return
 		# la suspense vince su turbo e caduta rapida
@@ -1543,9 +1969,18 @@ func _strip_run(s: Dictionary, speed: float, coins_only: bool = false) -> void:
 		elif turbo:
 			mult = 1.5
 		var v := speed * mult
-		s["offset"] += v * get_process_delta_time()
+		s["offset"] += v * minf(get_process_delta_time(), 0.05)
 		var landed := false
-		while s["offset"] >= PITCH:
+		# atterraggio d'ufficio: se lo stop e' stato chiesto da >3 s, scarico tutto e mi poso
+		if s["stopping"]:
+			s["t_stop"] = s.get("t_stop", 0.0) + 0.016
+			if s["t_stop"] > 3.0:
+				var guardia := 0
+				while not s["queue"].is_empty() and guardia < 12:
+					_strip_shift(s, coins_only)
+					guardia += 1
+				landed = true
+		while not landed and s["offset"] >= PITCH:
 			s["offset"] -= PITCH
 			_strip_shift(s, coins_only)
 			if s["stopping"] and s["queue"].is_empty():
@@ -1556,11 +1991,15 @@ func _strip_run(s: Dictionary, speed: float, coins_only: bool = false) -> void:
 			s["strip"].position.y = 0.0
 			break
 		s["strip"].position.y = s["offset"]
-	# rimbalzo d'atterraggio
-	var tw := create_tween()
-	tw.tween_property(s["strip"], "position:y", 13.0, 0.07).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(s["strip"], "position:y", 0.0, 0.10).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	await tw.finished
+	# rimbalzo d'atterraggio (attesa robusta: controllo, non segnale)
+	if is_instance_valid(s["strip"]):
+		var tw := create_tween()
+		tw.tween_property(s["strip"], "position:y", 13.0, 0.07).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(s["strip"], "position:y", 0.0, 0.10).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		var guard := 0
+		while tw.is_running() and guard < 60:
+			await get_tree().create_timer(0.016).timeout
+			guard += 1
 	s["finished"] = true
 
 func _strip_stop_with(s: Dictionary, entry_textures: Array) -> void:
@@ -1591,8 +2030,15 @@ func _reel_stop(reel: int, grid: Array, mults: Array, coins, grid_pre = null, es
 		entry.append(textures[sym] if textures.has(sym) else null)
 	entry.append(_rand_symbol_texture())
 	_strip_stop_with(s, entry)
-	while not s["finished"]:
-		await get_tree().process_frame
+	_nutri_watchdog()
+	_dbg("D%d attendo striscia" % reel)
+	var t_att := 0.0
+	while not s["finished"] and t_att < 4.0:
+		await get_tree().create_timer(0.016).timeout
+		t_att += get_process_delta_time()
+	if not s["finished"]:
+		push_warning("rullo %d forzato a terra" % reel)
+		s["finished"] = true
 	for row in ROWS:
 		var cv: int = coins[reel][row] if coins != null else 0
 		if finti.has(row):
@@ -1601,7 +2047,8 @@ func _reel_stop(reel: int, grid: Array, mults: Array, coins, grid_pre = null, es
 			continue
 		_set_cell(reel, row, g_land[reel][row], mults[reel][row] if g_land[reel][row] == "WILD" else 1, cv)
 		_landing_fx(reel, row, String(g_land[reel][row]))
-	s["win"].queue_free()
+	if is_instance_valid(s.get("win")):
+		s["win"].queue_free()
 	if espansi.has(reel):
 		await _espandi_wild(reel, grid, mults, g_land)
 	if sfx_on:
@@ -1615,6 +2062,7 @@ func _reel_tint(reel: int, c: Color) -> void:
 		col_strips[reel]["win"].modulate = c
 
 func _play_cassaforte(result: Dictionary, scale: float, bonus_key: String = "cassaforte") -> void:
+	_dbg("H cassaforte inizio")
 	var cassa: Dictionary = result[bonus_key]
 	var fresh := bonus_key == "rapina"   # la Rapina parte a griglia vuota
 	if cerimonia_lay != null and is_instance_valid(cerimonia_lay):
@@ -1680,9 +2128,11 @@ func _play_cassaforte(result: Dictionary, scale: float, bonus_key: String = "cas
 			last_reel = cs["reel"]
 			_strip_stop_with(cs, [textures.get("COIN"), textures.get("COIN")])
 		for cs in cell_strips:
-			while not cs["finished"]:
-				await get_tree().process_frame
-			cs["win"].queue_free()
+			var t_cs := 0.0
+			while not cs["finished"] and t_cs < 4.0:
+				await get_tree().create_timer(0.016).timeout
+				t_cs += get_process_delta_time()
+			if is_instance_valid(cs["win"]): cs["win"].queue_free()
 		# ripulisci e rivela gli atterraggi di questo respin
 		for reel in REELS:
 			for row in ROWS:
@@ -1732,6 +2182,7 @@ func _play_cassaforte(result: Dictionary, scale: float, bonus_key: String = "cas
 	# conto alla rovescia finale se la griglia non e' piena (3 giri a vuoto)
 	if not cassa["full"]:
 		while respin > 0:
+			_dbg("H cassaforte respin %d" % respin)
 			for tick in 4:
 				for reel in REELS:
 					for row in ROWS:
@@ -1742,6 +2193,7 @@ func _play_cassaforte(result: Dictionary, scale: float, bonus_key: String = "cas
 				await get_tree().create_timer(0.12).timeout
 			respin -= 1
 			_respin_luci_set(respin)
+			_nutri_watchdog()
 			await get_tree().create_timer(0.4).timeout
 	fs_info.text=""; _glow_stop(); _respin_luci_distruggi(); _bonus_hud_distruggi()
 	var total := int(round(cassa["total"]*scale))
@@ -1780,6 +2232,7 @@ func _play_cassaforte(result: Dictionary, scale: float, bonus_key: String = "cas
 			_set_cell(reel,row,result["grid"][reel][row],result["mults"][reel][row],result["coins"][reel][row])
 
 func _play_scasso(result: Dictionary, scale: float, finale: bool = true) -> int:
+	_dbg("H scasso inizio")
 	var picks: Array = result.get("scasso_picks", [result["scasso"]])
 	var lay := Node2D.new()
 	add_child(lay)
@@ -1866,7 +2319,8 @@ func _play_scasso(result: Dictionary, scale: float, finale: bool = true) -> int:
 		stato["bottoni"].append([b, ic])
 		b.pressed.connect(func(): _scasso_tap(b, ic, stato, picks, aperta, polizia, pot, scale))
 	while not stato["fine"]:
-		await get_tree().process_frame
+		_nutri_watchdog()
+		await get_tree().create_timer(0.016).timeout
 	await get_tree().create_timer(1.0).timeout
 	var tot := int(round(result["scasso"] * scale))
 	pot.text = _fmt(tot)
@@ -1879,12 +2333,17 @@ func _play_scasso(result: Dictionary, scale: float, finale: bool = true) -> int:
 		await get_tree().create_timer(0.5).timeout
 	var out := create_tween()
 	out.tween_property(lay, "modulate:a", 0.0, 0.3)
-	await out.finished
+	await _fine(out)
 	lay.queue_free()
 	return tot
 
 func _scasso_tap(b: TextureButton, ic: TextureRect, stato: Dictionary, picks: Array, aperta, polizia, pot: Label, scale: float) -> void:
-	if stato["fine"] or b.has_meta("usata"): return
+	_nutri_watchdog()
+	_scasso_tap_(b, ic, stato, picks, aperta, polizia, pot, scale)
+
+func _scasso_tap_(b: TextureButton, ic: TextureRect, stato: Dictionary, picks: Array, aperta, polizia, pot: Label, scale: float) -> void:
+	if stato["fine"] or stato.get("busy", false) or b.has_meta("usata"): return
+	stato["busy"] = true
 	b.set_meta("usata", true)
 	b.disabled = true
 	var centro: Vector2 = b.position + b.size / 2.0
@@ -1928,8 +2387,11 @@ func _scasso_tap(b: TextureButton, ic: TextureRect, stato: Dictionary, picks: Ar
 			stato["fine"] = true
 			_flash_schermo(Color("#ffd700"), 0.4, 0.6)
 			_targa_banner(T("ripulito"), Color("#f5b73f"), 1.4)
+		stato["busy"] = false
 	else:
-		# LA POLIZIA!
+		# LA POLIZIA! (blocco subito tutte le casseforti: niente altri tocchi)
+		for coppia0 in stato["bottoni"]:
+			if is_instance_valid(coppia0[0]): coppia0[0].disabled = true
 		if polizia != null:
 			ic.texture = polizia
 			ic.visible = true
@@ -1948,6 +2410,9 @@ func _scasso_tap(b: TextureButton, ic: TextureRect, stato: Dictionary, picks: Ar
 			_flash_schermo(Color("#d13a3a") if j % 2 == 0 else Color("#3a6fd8"), 0.3, 0.24)
 			await get_tree().create_timer(0.13).timeout
 		await _targa_banner(T("polizia"), Color("#3a6fd8"), 1.4)
+		if not is_instance_valid(stato.get("lay")):
+			stato["fine"] = true
+			return
 		# I PREMI MANCATI: le casseforti rimaste si aprono in grigio, una a una
 		var mancati: Array = []
 		for j in range(k, SlotEngine.SCASSO_LADDER.size()):
@@ -1967,7 +2432,7 @@ func _scasso_tap(b: TextureButton, ic: TextureRect, stato: Dictionary, picks: Ar
 			for coppia in stato["bottoni"]:
 				var b2: TextureButton = coppia[0]
 				var ic2: TextureRect = coppia[1]
-				if b2.has_meta("usata") or idx >= mancati.size(): continue
+				if not is_instance_valid(b2) or b2.has_meta("usata") or idx >= mancati.size(): continue
 				b2.set_meta("usata", true)
 				b2.disabled = true
 				var vm := int(round(mancati[idx] * scale))
@@ -1991,6 +2456,7 @@ func _scasso_tap(b: TextureButton, ic: TextureRect, stato: Dictionary, picks: Ar
 		stato["fine"] = true
 
 func _play_heist(result: Dictionary, scale: float, fs_key: String = "free_spins") -> void:
+	_dbg("H colpo inizio")
 	var fs_list: Array = result[fs_key]
 	for i in 4:
 		_tint_all(Color("#ff5252") if i%2==0 else Color.WHITE); await get_tree().create_timer(0.2).timeout
@@ -2028,12 +2494,15 @@ func _play_heist(result: Dictionary, scale: float, fs_key: String = "free_spins"
 			_bonus_hud_mult(1)
 		_bonus_hud_giro(i+1, n)
 		_bonus_hud_loot(int(round(loot*scale)))
+		_nutri_watchdog()
+		_dbg("H colpo giro %d/%d" % [i+1, n])
 		_reels_start_all()
 		if fs.has("complice"):
 			_reel_tint(fs["complice"], Color(0.75, 1.35, 0.75))
 		await get_tree().create_timer(FS_SHUFFLE).timeout
 		# i rulli si fermano in sequenza da sinistra, come nel gioco base
 		for reel in REELS:
+			_dbg("H colpo rullo %d" % reel)
 			await _reel_stop(reel, fs["grid"], fs["mults"], fs.get("coins"), fs.get("grid_pre"), fs.get("espansi", []))
 			if reel < REELS-1:
 				await get_tree().create_timer(0.10).timeout
@@ -2110,7 +2579,7 @@ func _play_heist(result: Dictionary, scale: float, fs_key: String = "free_spins"
 			var mt := create_tween().set_parallel(true)
 			mt.tween_property(ml, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 			mt.tween_property(ml, "modulate:a", 1.0, 0.18)
-			await mt.finished
+			await _fine(mt)
 			_shake(4.0, 0.2)
 			await get_tree().create_timer(0.55).timeout
 			var mo := create_tween()
@@ -2153,6 +2622,7 @@ func _play_heist(result: Dictionary, scale: float, fs_key: String = "free_spins"
 	await _bonus_exit()
 
 func _count_up(prefix: String, amount: int, duration: float) -> void:
+	_dbg("H count_up")
 	_sfx("sfx_win_big" if amount >= _bet() * 10 else "sfx_win_small")
 	win_label.pivot_offset = win_label.size / 2.0
 	var pulse := create_tween().set_loops()
@@ -2162,7 +2632,7 @@ func _count_up(prefix: String, amount: int, duration: float) -> void:
 	_ticker(tick_st)
 	var t := create_tween()
 	t.tween_method(func(v: float): win_label.text = prefix + _fmt(int(v)), 0.0, float(amount), duration)
-	await t.finished
+	await _fine(t)
 	tick_st["on"] = false
 	pulse.kill()
 	win_label.scale = Vector2.ONE
@@ -2194,6 +2664,7 @@ func _flash(winning: Array) -> void:
 var presagi: Array = []
 
 func _targa_banner(testo: String, col: Color = Color("#e3a93c"), durata: float = 1.0) -> void:
+	_dbg("H targa")
 	var w := maxf(380.0, testo.length() * 24.0 + 90.0)
 	var h := 82.0
 	var holder := Control.new()
@@ -2251,12 +2722,12 @@ func _targa_banner(testo: String, col: Color = Color("#e3a93c"), durata: float =
 	tin.tween_property(holder, "scale", Vector2(1.12, 1.12), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tin.tween_property(holder, "rotation_degrees", 0.0, 0.22)
 	tin.chain().tween_property(holder, "scale", Vector2.ONE, 0.12)
-	await tin.finished
+	await _fine(tin)
 	await get_tree().create_timer(durata).timeout
 	var tout := create_tween().set_parallel(true)
 	tout.tween_property(holder, "scale", Vector2(0.3, 0.3), 0.18)
 	tout.tween_property(holder, "modulate:a", 0.0, 0.18)
-	await tout.finished
+	await _fine(tout)
 	holder.queue_free()
 
 func _presagio_start(col: Color, sfx_nome: String) -> void:
@@ -2311,6 +2782,7 @@ func _cerimonia_chiudi() -> void:
 	cerimonia_lay = null
 
 func _cerimonia_sblocco(tk: String) -> void:
+	_dbg("H cerimonia")
 	var col: Color = PIANO_COL[tk]
 	var lay := Node2D.new()
 	add_child(lay)
@@ -2346,7 +2818,7 @@ func _cerimonia_sblocco(tk: String) -> void:
 	tool.scale = Vector2(0.15, 0.15)
 	var tin := create_tween()
 	tin.tween_property(tool, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	await tin.finished
+	await _fine(tin)
 
 	if tk == "TOOL_RED":
 		# il grimaldello forza la serratura: tre scatti e cede
@@ -2354,14 +2826,14 @@ func _cerimonia_sblocco(tk: String) -> void:
 			var tw := create_tween()
 			tw.tween_property(tool, "rotation_degrees", -16.0, 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 			tw.tween_property(tool, "rotation_degrees", 10.0, 0.07)
-			await tw.finished
+			await _fine(tw)
 			_sfx_tool()
 			_scintille(centro + Vector2(30, 20), col, 6)
 			_shake(3.5, 0.1)
 			await get_tree().create_timer(0.18).timeout
 		var snap := create_tween()
 		snap.tween_property(tool, "rotation_degrees", 52.0, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-		await snap.finished
+		await _fine(snap)
 		_sfx("sfx_unlock")
 		_flash_schermo(col, 0.35, 0.5)
 		_shockwave(centro, col, 360.0)
@@ -2372,7 +2844,7 @@ func _cerimonia_sblocco(tk: String) -> void:
 		tool.position = Vector2(-260.0, centro.y - tool.size.y / 2.0)
 		var sw := create_tween()
 		sw.tween_property(tool, "position:x", centro.x - tool.size.x / 2.0, 0.38).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		await sw.finished
+		await _fine(sw)
 		_sfx_tool()
 		var linea := ColorRect.new()
 		linea.color = Color(col.r, col.g, col.b, 0.85)
@@ -2382,7 +2854,7 @@ func _cerimonia_sblocco(tk: String) -> void:
 		linea.position = Vector2(centro.x - linea.size.x / 2.0, centro.y - tool.size.y / 2.0)
 		var sl := create_tween()
 		sl.tween_property(linea, "position:y", centro.y + tool.size.y / 2.0, 0.42)
-		await sl.finished
+		await _fine(sl)
 		linea.queue_free()
 		_sfx("sfx_unlock")
 		_flash_schermo(col, 0.32, 0.5)
@@ -2393,7 +2865,7 @@ func _cerimonia_sblocco(tk: String) -> void:
 		# la chiave entra nella toppa e gira
 		var kr := create_tween()
 		kr.tween_property(tool, "rotation_degrees", 90.0, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN_OUT)
-		await kr.finished
+		await _fine(kr)
 		_sfx("sfx_unlock")
 		_flash_schermo(col, 0.35, 0.55)
 		_shockwave(centro, col, 400.0)
@@ -2403,11 +2875,12 @@ func _cerimonia_sblocco(tk: String) -> void:
 	# l'attrezzo svanisce, il nero resta: la scena nasce da qui
 	var out := create_tween()
 	out.tween_property(tool, "modulate:a", 0.0, 0.2)
-	await out.finished
+	await _fine(out)
 
 func _mm_anim_loop() -> void:
 	var fr := 0
 	while is_instance_valid(mastermind_node):
+		_nutri_watchdog()
 		if mm_frames_attivi == "coins" and mm_coins != null:
 			mastermind_node.texture = mm_coins
 			await get_tree().create_timer(0.2).timeout
@@ -2488,6 +2961,11 @@ func _demo_bonus() -> void:
 	demo_in_corso = false
 
 func _mastermind_dice(testo: String, attesa: float = 1.2) -> void:
+	_nutri_watchdog()
+	await _mastermind_dice_(testo, attesa)
+
+func _mastermind_dice_(testo: String, attesa: float = 1.2) -> void:
+	_dbg("H dialogo")
 	# scena-dialogo su nero: personaggio a sinistra, fumetto a macchina da scrivere
 	var lay := Node2D.new()
 	add_child(lay)
@@ -2548,7 +3026,7 @@ func _mastermind_dice(testo: String, attesa: float = 1.2) -> void:
 	fum.add_child(lb)
 	lb.position = Vector2(24, 12)
 	lb.size = Vector2(512, 126)
-	await pop.finished
+	await _fine(pop)
 	# macchina da scrivere
 	var tick = _find_audio("sfx_count")
 	for i in testo.length():
@@ -2561,12 +3039,13 @@ func _mastermind_dice(testo: String, attesa: float = 1.2) -> void:
 	_flash_schermo(Color("#ffffff"), 0.5, 0.35)
 	var out := create_tween()
 	out.tween_property(lay, "modulate:a", 0.0, 0.3)
-	await out.finished
+	await _fine(out)
 	lay.queue_free()
 
 # ================= COLPO SUPREMO: UN FILM IN QUATTRO ATTI =================
 
 func _play_supremo(result: Dictionary, scale: float) -> void:
+	_dbg("H supremo inizio")
 	# ATTO 1 - LA CONVERGENZA: i tre attrezzi si scontrano al centro
 	for tkx in piano_med.keys():
 		_telegraph_stop(tkx)
@@ -2624,7 +3103,7 @@ func _play_supremo(result: Dictionary, scale: float) -> void:
 	await get_tree().create_timer(0.4).timeout
 	var out := create_tween()
 	out.tween_property(lay, "modulate:a", 0.0, 0.3)
-	await out.finished
+	await _fine(out)
 	lay.queue_free()
 	await _mastermind_dice(T("sup_1"), 1.3)
 
@@ -2717,7 +3196,7 @@ func _ruota_moltiplicatore(lay: Node2D, centro: Vector2, m: int, colm: Color) ->
 	disco.scale = Vector2(0.2, 0.2)
 	var tin := create_tween()
 	tin.tween_property(disco, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	await tin.finished
+	await _fine(tin)
 	# il marcatore parte in alto (badge 0): per puntare il badge idx ruota di idx settori + giri interi
 	var candidati: Array = []
 	for i in n:
@@ -2730,8 +3209,10 @@ func _ruota_moltiplicatore(lay: Node2D, centro: Vector2, m: int, colm: Color) ->
 	giro.tween_property(disco, "rotation", finale, 3.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	var tick = _find_audio("sfx_count")
 	var ultimo := -1
-	while giro.is_running():
-		await get_tree().process_frame
+	var t_giro := 0.0
+	while giro.is_running() and t_giro < 6.0:
+		t_giro += 0.016
+		await get_tree().create_timer(0.016).timeout
 		var sett_att := int(floor(fmod(disco.rotation + TAU * 100.0, TAU) / (TAU / n) + 0.5)) % n
 		if sett_att != ultimo:
 			ultimo = sett_att
@@ -2757,13 +3238,14 @@ func _ruota_moltiplicatore(lay: Node2D, centro: Vector2, m: int, colm: Color) ->
 	var out := create_tween().set_parallel(true)
 	out.tween_property(disco, "modulate:a", 0.0, 0.3)
 	for bb in badges: out.tween_property(bb, "modulate:a", 0.0, 0.3)
-	await out.finished
+	await _fine(out)
 	disco.queue_free()
 	for bb in badges: bb.queue_free()
 
 # ================= IL TAGLIO DEL DIAMANTE =================
 
 func _play_taglio(result: Dictionary, scale: float, finale: bool = true) -> int:
+	_dbg("H taglio inizio")
 	var tg: Dictionary = result["taglio"]
 	var lay := Node2D.new()
 	add_child(lay)
@@ -2804,7 +3286,8 @@ func _play_taglio(result: Dictionary, scale: float, finale: bool = true) -> int:
 	var stato := {"colpi": 0, "rotto": false}
 	dia.pressed.connect(func(): _taglio_tap(dia, stato, centro))
 	while not stato["rotto"]:
-		await get_tree().process_frame
+		_nutri_watchdog()
+		await get_tree().create_timer(0.016).timeout
 	rot.kill(); glow.kill()
 	tit.text = ""
 	# frammenti a stella
@@ -2907,8 +3390,10 @@ func _play_taglio(result: Dictionary, scale: float, finale: bool = true) -> int:
 		for i in 6:
 			_play_limited(sfx_player, tick2, "sfx_count")
 			await get_tree().create_timer(0.15).timeout
-	while tc2.is_running():
-		await get_tree().process_frame
+	var t_c2 := 0.0
+	while tc2.is_running() and t_c2 < 4.0:
+		t_c2 += 0.016
+		await get_tree().create_timer(0.016).timeout
 	var cp := create_tween()
 	cp.tween_property(cont, "scale", Vector2(1.3, 1.3), 0.12)
 	cp.tween_property(cont, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -2923,11 +3408,21 @@ func _play_taglio(result: Dictionary, scale: float, finale: bool = true) -> int:
 		await get_tree().create_timer(0.5).timeout
 	var out := create_tween()
 	out.tween_property(lay, "modulate:a", 0.0, 0.3)
-	await out.finished
+	await _fine(out)
 	lay.queue_free()
 	return tot
 
 func _taglio_tap(dia: TextureButton, stato: Dictionary, centro: Vector2) -> void:
+	_nutri_watchdog()
+	_taglio_tap_(dia, stato, centro)
+
+func _taglio_tap_(dia: TextureButton, stato: Dictionary, centro: Vector2) -> void:
+	if stato.get("busy", false) or stato["rotto"]: return
+	stato["busy"] = true
+	await _taglio_tap_impl(dia, stato, centro)
+	stato["busy"] = false
+
+func _taglio_tap_impl(dia: TextureButton, stato: Dictionary, centro: Vector2) -> void:
 	if stato["rotto"]: return
 	stato["colpi"] += 1
 	var c: int = stato["colpi"]
@@ -2956,6 +3451,7 @@ func _taglio_tap(dia: TextureButton, stato: Dictionary, centro: Vector2) -> void
 # ================= WILD ESPANSO =================
 
 func _espandi_wild(reel: int, grid: Array, mults: Array, g_land: Array) -> void:
+	_dbg("H espandi wild")
 	# la maschera si allarga dalla cella d'origine a tutto il rullo
 	var origine := 1
 	for row in ROWS:
@@ -2982,7 +3478,7 @@ func _espandi_wild(reel: int, grid: Array, mults: Array, g_land: Array) -> void:
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(ov, "position:y", 4.0, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.tween_property(ov, "size:y", ROWS * PITCH - GAP - 8.0, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	await tw.finished
+	await _fine(tw)
 	var centro := _cell_center(reel, 1)
 	_flash_schermo(Color("#ff5a6e"), 0.25, 0.35)
 	_shockwave(centro, Color("#ff5a6e"), 260.0)
@@ -3024,7 +3520,8 @@ func _aura_cella(c: Dictionary, sym: String) -> void:
 		c["sweep_tw"] = stw
 	c["tex"].scale = Vector2(1.08, 1.08) if lv == "leggenda" else Vector2(1.04, 1.04)
 	var col: Color = COLORE_ATTERRAGGIO.get(sym, Color("#ffd700"))
-	aura.texture = _glow_texture(col)
+	var gt := _glow_texture(col)
+	if aura.texture != gt: aura.texture = gt
 	aura.visible = true
 	var forte := lv == "leggenda"
 	aura.modulate = Color(1, 1, 1, 0.55 if forte else 0.32)
@@ -3092,7 +3589,7 @@ func _momento_verita_fine() -> void:
 	tz.tween_property(grid_root, "position", verita_pos, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	var out := create_tween()
 	out.tween_property(verita_lay, "modulate:a", 0.0, 0.4)
-	await out.finished
+	await _fine(out)
 	grid_root.z_index = 0
 	verita_lay.queue_free()
 	verita_lay = null
@@ -3306,6 +3803,7 @@ func _respin_luci_distruggi() -> void:
 # ================= IL MASTERMIND LANCIA LA DINAMITE =================
 
 func _mastermind_lancia(bersagli: Array) -> void:
+	_dbg("H lancio dinamite")
 	var furia := bersagli.size() >= 2
 	var mm_prima := mm_frames_attivi
 	var tex_lancio = null
@@ -3398,8 +3896,8 @@ func _mastermind_lancia(bersagli: Array) -> void:
 		var dur := 0.36 if furia else 0.5
 		var tme := 0.0
 		while tme < dur:
-			await get_tree().process_frame
-			var dt := get_process_delta_time()
+			await get_tree().create_timer(0.016).timeout
+			var dt := maxf(get_process_delta_time(), 0.008)
 			tme += dt
 			var u := clampf(tme / dur, 0.0, 1.0)
 			var pos := mano.lerp(ctrl, u).lerp(ctrl.lerp(dest, u), u)
@@ -3469,12 +3967,21 @@ func _shake(forza: float, durata: float) -> void:
 	var orig: Vector2 = grid_root.position
 	var t := 0.0
 	while t < durata:
-		await get_tree().process_frame
+		await get_tree().create_timer(0.016).timeout
 		t += get_process_delta_time()
 		grid_root.position = orig + Vector2(randf_range(-forza, forza), randf_range(-forza, forza))
 	grid_root.position = orig
 
+var _tex_cache := {}
+
 func _ring_texture(col: Color) -> GradientTexture2D:
+	var key := "ring_" + col.to_html(false)
+	if _tex_cache.has(key): return _tex_cache[key]
+	var t0 := _ring_texture_nuova(col)
+	_tex_cache[key] = t0
+	return t0
+
+func _ring_texture_nuova(col: Color) -> GradientTexture2D:
 	var g := Gradient.new()
 	g.colors = PackedColorArray([Color(col.r, col.g, col.b, 0.0), Color(col.r, col.g, col.b, 0.0), col, Color(col.r, col.g, col.b, 0.0)])
 	g.offsets = PackedFloat32Array([0.0, 0.72, 0.85, 1.0])
@@ -3487,6 +3994,13 @@ func _ring_texture(col: Color) -> GradientTexture2D:
 	return t
 
 func _glow_texture(col: Color) -> GradientTexture2D:
+	var key := "glow_" + col.to_html(false)
+	if _tex_cache.has(key): return _tex_cache[key]
+	var t0 := _glow_texture_nuova(col)
+	_tex_cache[key] = t0
+	return t0
+
+func _glow_texture_nuova(col: Color) -> GradientTexture2D:
 	var g := Gradient.new()
 	g.colors = PackedColorArray([Color(col.r, col.g, col.b, 0.75), Color(col.r, col.g, col.b, 0.22), Color(col.r, col.g, col.b, 0.0)])
 	g.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
@@ -3574,6 +4088,7 @@ func _popup_vincita(v: int) -> void:
 	tw.chain().tween_callback(lb.queue_free)
 
 func _celebra_vincita(amount: int) -> void:
+	_dbg("H celebra")
 	var x := float(amount) / float(_bet())
 	var chiave := ""
 	var livello := 0
@@ -3613,6 +4128,7 @@ func _celebra_vincita(amount: int) -> void:
 	raggi.position = Vector2(VW / 2.0, VH / 2.0 - 20.0)
 	var trot := create_tween().set_loops()
 	trot.tween_property(raggi, "rotation", TAU, 8.0 - livello)
+	lay.tree_exiting.connect(func(): if trot.is_valid(): trot.kill())
 	# il MASTERMIND entra da destra in posa d'esultanza
 	if mm_win_frames.size() >= 2 or mm_normal != null:
 		var mm := TextureRect.new()
@@ -3669,7 +4185,7 @@ func _celebra_vincita(amount: int) -> void:
 	# monete a fontana + tin-tin durante la salita
 	var coin_tex = load("res://assets/fx_coin.png") if ResourceLoader.exists("res://assets/fx_coin.png") else null
 	var t0 := 0.0
-	while tnum.is_running():
+	while tnum.is_running() and t0 < 8.0:
 		await get_tree().create_timer(0.12).timeout
 		t0 += 0.12
 		if sfx_on and tick != null: _play_limited(spin_sfx_player, tick, "sfx_count")
@@ -3696,7 +4212,7 @@ func _celebra_vincita(amount: int) -> void:
 	await get_tree().create_timer(1.2 + 0.4 * livello).timeout
 	var fade := create_tween()
 	fade.tween_property(lay, "modulate:a", 0.0, 0.4)
-	await fade.finished
+	await _fine(fade)
 	lay.queue_free()
 	if mm_frames_attivi == "coins":
 		mm_frames_attivi = mm_prima
@@ -3705,6 +4221,7 @@ func _celebra_vincita(amount: int) -> void:
 # ================= SCENA BONUS (FX) =================
 
 func _fx_start(banner_file: String, tint: Color) -> void:
+	_dbg("H fx_start")
 	# layer sopra tutto
 	fx_layer = Node2D.new()
 	add_child(fx_layer)
@@ -3715,15 +4232,20 @@ func _fx_start(banner_file: String, tint: Color) -> void:
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fx_layer.add_child(veil)
 	# vignetta radiale: luce al centro, buio ai bordi
-	var vgrad := Gradient.new()
-	vgrad.colors = PackedColorArray([Color(0,0,0,0.0), Color(0,0,0,0.0), Color(0,0,0,0.55)])
-	vgrad.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
-	var vtex := GradientTexture2D.new()
-	vtex.gradient = vgrad
-	vtex.fill = GradientTexture2D.FILL_RADIAL
-	vtex.fill_from = Vector2(0.5, 0.5)
-	vtex.fill_to = Vector2(0.5, 0.0)
-	vtex.width = 512; vtex.height = 512
+	var vtex: GradientTexture2D
+	if _tex_cache.has("vignetta"):
+		vtex = _tex_cache["vignetta"]
+	else:
+		var vgrad := Gradient.new()
+		vgrad.colors = PackedColorArray([Color(0,0,0,0.0), Color(0,0,0,0.0), Color(0,0,0,0.55)])
+		vgrad.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
+		vtex = GradientTexture2D.new()
+		vtex.gradient = vgrad
+		vtex.fill = GradientTexture2D.FILL_RADIAL
+		vtex.fill_from = Vector2(0.5, 0.5)
+		vtex.fill_to = Vector2(0.5, 0.0)
+		vtex.width = 512; vtex.height = 512
+		_tex_cache["vignetta"] = vtex
 	var vg := TextureRect.new()
 	vg.texture = vtex
 	vg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -3896,6 +4418,7 @@ func _burst_money(n: int) -> void:
 # ============ TRANSIZIONE SCENA BONUS ============
 
 func _bonus_enter() -> void:
+	_dbg("H bonus_enter")
 	# 1) raffica di pioggia che copre lo schermo
 	var coin_tex = load("res://assets/fx_coin.png") if ResourceLoader.exists("res://assets/fx_coin.png") else null
 	var bill_tex = load("res://assets/fx_bill.png") if ResourceLoader.exists("res://assets/fx_bill.png") else null
@@ -3933,7 +4456,7 @@ func _bonus_exit() -> void:
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(grid_root, "scale", Vector2.ONE, 0.35)
 	tw.tween_property(grid_root, "position", Vector2(GRID_X, GRID_Y), 0.35)
-	await tw.finished
+	await _fine(tw)
 	for nd in hud_nodes:
 		if is_instance_valid(nd): nd.visible = true
 
@@ -4004,7 +4527,7 @@ func _play_limited(player: AudioStreamPlayer, stream, name: String) -> void:
 	if player.stream == stream and player.playing:
 		var tw := create_tween()
 		tw.tween_property(player, "volume_db", -40.0, 0.08)
-		await tw.finished
+		await _fine(tw)
 		if player.stream == stream:
 			player.stop()
 		player.volume_db = 0.0
@@ -4014,3 +4537,5 @@ func _sfx(name: String) -> void:
 	var stream = _find_audio(name)
 	if stream == null: return
 	_play_limited(sfx_player, stream, name)
+
+

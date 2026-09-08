@@ -1,5 +1,7 @@
-
-# menu.gd - MENU MIDNIGHT HEIST v2.4.1 (ATTRACT MODE)
+# ==== INIZIO FILE: copia da questa riga in giu' ====
+# menu.gd - MENU MIDNIGHT HEIST v2.5 (AUDIO WEB)
+# v2.5: sul web i browser bloccano l'audio finche' l'utente non tocca la
+#   pagina: al primo click/tocco il menu fa (ri)partire la musica.
 # v2.4.1: fix - lo Sprite2D e' gia' centrato, niente pivot_offset;
 #   il Mastermind ondeggia attorno ai piedi via offset.
 # v2.4: il logo respira e brilla; il Mastermind ondeggia; una VINCITA
@@ -61,6 +63,16 @@ func _play_menu_music() -> void:
 	menu_music.stream = stream; menu_music.volume_db = -6.0
 	add_child(menu_music)
 	if _mus_on(): menu_music.play()
+
+func _input(event: InputEvent) -> void:
+	# WEB: l'audio e' bloccato dal browser fino al primo gesto dell'utente.
+	# Al primo click/tocco/tasto riavvio la musica se e' ferma o "muta".
+	if event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventKey:
+		if event.is_pressed() and menu_music != null and _mus_on():
+			if not menu_music.playing:
+				menu_music.play()
+			elif OS.has_feature("web") and menu_music.get_playback_position() < 0.05:
+				menu_music.stop(); menu_music.play()
 
 func _gold_button(text: String, x: float, y: float, w: float, h: float, fsize: int, gold: bool = true) -> Button:
 	var b := Button.new()

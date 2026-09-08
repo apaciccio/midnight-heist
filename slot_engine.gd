@@ -1,5 +1,11 @@
-
-# slot_engine.gd - MOTORE v0.18.2 (CERTIFICATO - MATEMATICA CONGELATA)
+# ==== INIZIO FILE: copia da questa riga in giu' ====
+# slot_engine.gd - MOTORE v0.19 (PITY TIMER SUGLI ATTREZZI)
+# v0.19: il medaglione pieno garantisce lo sblocco (probabilita' che cresce
+#   con la carica fino a 1). Nessun cambio all'EV di lungo periodo; da
+#   ricertificare la sola distribuzione dell'attesa.
+# v0.18.3: lavagna degli attrezzi separata PER LIVELLO DI PUNTATA e
+#   salvata su disco (cambi puntata e torni: ritrovi la tua carica).
+#   Nessun effetto sulla matematica (i trigger sono per pezzo).
 # v0.18.2: la DEMO del Colpo mette le tre casseforti su rulli casuali
 #   (solo estetica del tasto D; la matematica del gioco vero e' invariata).
 # v0.18.1: SCASSO con premi grossi (20-50-100-200-300-500-750-1000) e
@@ -80,6 +86,8 @@ const CASSA_FULL_BONUS := 10000    # GRAND
 
 # --- PIANO DEL COLPO ---
 const PIANO_TRIGGER_P := {"TOOL_RED": 0.0318, "TOOL_GREEN": 0.0187, "TOOL_BLUE": 0.0122}
+# pezzi che riempiono il medaglione e garantiscono lo sblocco (pity timer)
+const CARICA_PIENA := {"TOOL_RED": 40, "TOOL_GREEN": 70, "TOOL_BLUE": 110}
 const SUPER_P := 0.06                # ogni sblocco: 6% di COLPO SUPREMO
 const SHOWER_P := 0.03               # PIOGGIA DI ATTREZZI: 1 spin su 33
 const SHOWER_MIX := {"TOOL_RED": 0.6, "TOOL_GREEN": 0.3, "TOOL_BLUE": 0.1}
@@ -113,25 +121,44 @@ func _init() -> void:
 	rng.randomize()
 	_load_lavagna()
 
-# ---------- PERSISTENZA LAVAGNA ----------
+# ---------- PERSISTENZA LAVAGNA (una per livello di puntata) ----------
+# Ogni livello di puntata ha i SUOI contatori: cambiando puntata si
+# mette via la lavagna corrente e si riprende quella del nuovo livello.
+# Tutto salvato su disco (user://), quindi sopravvive alla chiusura.
+var lavagna_livello := 0    # indice del livello di puntata attivo
 
 func _load_lavagna() -> void:
 	var cf := ConfigFile.new()
 	if cf.load(PIANO_SAVE_PATH) == OK:
+		lavagna_livello = int(cf.get_value("piano", "livello", 0))
 		for k in lavagna.keys():
-			lavagna[k] = int(cf.get_value("piano", k, 0))
+			lavagna[k] = int(cf.get_value("piano_%d" % lavagna_livello, k, 0))
 
 func _save_lavagna() -> void:
 	var cf := ConfigFile.new()
+	cf.load(PIANO_SAVE_PATH)   # tengo le lavagne degli altri livelli
+	cf.set_value("piano", "livello", lavagna_livello)
 	for k in lavagna.keys():
-		cf.set_value("piano", k, lavagna[k])
+		cf.set_value("piano_%d" % lavagna_livello, k, lavagna[k])
 	cf.save(PIANO_SAVE_PATH)
 
 func _reset_lavagna() -> void:
 	for k in lavagna.keys():
 		lavagna[k] = 0
 
-# chiamata dal main al cambio puntata: carica visiva da zero
+# chiamata dal main al cambio puntata: salva la lavagna del livello vecchio,
+# carica quella del nuovo (zero se e' la prima volta)
+func cambia_livello(nuovo: int) -> void:
+	_save_lavagna()
+	lavagna_livello = nuovo
+	var cf := ConfigFile.new()
+	_reset_lavagna()
+	if cf.load(PIANO_SAVE_PATH) == OK:
+		for k in lavagna.keys():
+			lavagna[k] = int(cf.get_value("piano_%d" % lavagna_livello, k, 0))
+	_save_lavagna()
+
+# compatibilita': azzera solo il livello corrente
 func azzera_lavagna() -> void:
 	_reset_lavagna()
 	_save_lavagna()
@@ -562,12 +589,22 @@ func play_spin() -> Dictionary:
 	result["tools_landed"] = tools_landed
 
 	# accumulo + estrazione degli sblocchi (max uno per colore per spin)
+	# PITY TIMER: piu' il medaglione e' carico, piu' sale la probabilita'.
+	# A CARICA_PIENA[k] pezzi la probabilita' e' 1 (sblocco garantito): il
+	# medaglione "pieno" NON resta mai bloccato. L'EV di lungo periodo non
+	# cambia, cambia solo la distribuzione dell'attesa.
 	var triggered: Array = []
 	for k in tools_landed.keys():
 		for i in tools_landed[k]:
 			lavagna[k] += 1
-			if not triggered.has(k) and rng.randf() < PIANO_TRIGGER_P[k]:
-				triggered.append(k)
+			if not triggered.has(k):
+				var base_p: float = PIANO_TRIGGER_P[k]
+				var pieni: int = CARICA_PIENA[k]
+				var frac: float = clampf(float(lavagna[k]) / float(pieni), 0.0, 1.0)
+				# probabilita' che cresce: parte da base_p, arriva a 1 a carica piena
+				var p: float = base_p + (1.0 - base_p) * pow(frac, 2.5)
+				if lavagna[k] >= pieni or rng.randf() < p:
+					triggered.append(k)
 
 	# DEMO: esito ESATTO, senza sblocchi naturali ne' Supremo casuale
 	if forza_prossimo == "scasso":

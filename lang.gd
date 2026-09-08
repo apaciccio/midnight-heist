@@ -1,5 +1,5 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# lang.gd - LINGUE DI MIDNIGHT HEIST v1.7 (+ autospin)
+# lang.gd - LINGUE DI MIDNIGHT HEIST v1.8 (+ ricarica)
 # UN SOLO FILE per tutti i testi del gioco (main e menu), in 7 lingue:
 # it, en, es, de, fr, pt, ru. La lingua si RILEVA dal dispositivo
 # (OS.get_locale_language); se non e' supportata si usa l'inglese.
@@ -57,6 +57,7 @@ const TESTI := {
 	"retrigger": {"it": "+%d GIRI!", "en": "+%d SPINS!", "es": "+%d GIROS!", "de": "+%d SPINS!", "fr": "+%d TOURS !", "pt": "+%d RODADAS!", "ru": "+%d СПИНОВ!"},
 	"mancati": {"it": "PREMI MANCATI", "en": "MISSED PRIZES", "es": "PREMIOS PERDIDOS", "de": "VERPASSTE PREISE", "fr": "PRIX MANQUÉS", "pt": "PRÉMIOS PERDIDOS", "ru": "УПУЩЕННЫЕ ПРИЗЫ"},
 	"auto_scegli": {"it": "Quanti giri automatici?", "en": "How many auto spins?", "es": "¿Cuántas tiradas automáticas?", "de": "Wie viele Auto-Spins?", "fr": "Combien de tours auto ?", "pt": "Quantas rodadas automáticas?", "ru": "Сколько автоспинов?"},
+	"ricarica": {"it": "+1.000 MONETE DI CORTESIA", "en": "+1,000 COURTESY COINS", "es": "+1.000 MONEDAS DE CORTESÍA", "de": "+1.000 GRATIS-MÜNZEN", "fr": "+1 000 PIÈCES OFFERTES", "pt": "+1.000 MOEDAS DE CORTESIA", "ru": "+1 000 БОНУСНЫХ МОНЕТ"},
 	"una_manca": {"it": "Ne manca una...", "en": "One more...", "es": "Falta una...", "de": "Einer fehlt noch...", "fr": "Il en manque un...", "pt": "Falta um...", "ru": "Ещё один..."},
 	"cassa_titolo": {"it": "LA CASSAFORTE", "en": "THE VAULT", "es": "LA CAJA FUERTE", "de": "DER TRESOR", "fr": "LE COFFRE", "pt": "O COFRE", "ru": "СЕЙФ"},
 	"sup_1": {"it": "Stanotte si fa sul serio. Tutti e tre gli attrezzi... e' il COLPO SUPREMO.", "en": "Tonight it's for real. All three tools... it's the ULTIMATE HEIST.", "es": "Esta noche va en serio. Las tres herramientas... es el GOLPE SUPREMO.", "de": "Heute Nacht wird es ernst. Alle drei Werkzeuge... das ist der ULTIMATIVE COUP.", "fr": "Ce soir, c'est du sérieux. Les trois outils... c'est le COUP SUPRÊME.", "pt": "Esta noite é a sério. As três ferramentas... é o GOLPE SUPREMO.", "ru": "Сегодня всё по-настоящему. Все три инструмента... это ВЕЛИКОЕ ОГРАБЛЕНИЕ."},
