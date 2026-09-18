@@ -1,5 +1,9 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# main.gd - MIDNIGHT HEIST v3.74 (CARICA DEI MEDAGLIONI VISIBILE)
+# main.gd - MIDNIGHT HEIST v3.76 (TARGHETTA SCATTER)
+# v3.76: la DINAMITE non compare piu' prima del lancio quando il suo rullo ha
+#   una MASCHERA che si espande (l'espansione ridisegnava la cella vera).
+# v3.75: targhetta "SCATTER" illustrata (assets/scatter_tag.png) incollata in
+#   basso sulla cassaforte quando atterra; se manca, scritta in testo.
 # v3.74: i medaglioni del Piano si caricano DAVVERO a vista. Con la
 #   matematica v0.19 lo sblocco arriva in media al 30-35% della carica
 #   piena, e la carica era disegnata lineare: si illuminava solo il terzo
@@ -1123,9 +1127,33 @@ func _turbo_refresh() -> void:
 		var sb: StyleBoxFlat = turbo_btn.get_theme_stylebox("normal")
 		if sb != null: sb.bg_color = Color("#ff9a3c") if turbo else Color("#c9a24a")
 
+# TARGHETTA "SCATTER" illustrata (assets/scatter_tag.png): incollata in basso
+# sulla cella quando atterra uno scatter. Creata una volta per cella, poi
+# solo mostrata/nascosta. Se l'immagine manca, _set_cell scrive il testo.
+func _scatter_tag(c: Dictionary, mostra: bool) -> void:
+	if not mostra:
+		if c.has("tag") and is_instance_valid(c["tag"]): c["tag"].visible = false
+		return
+	if not ResourceLoader.exists("res://assets/scatter_tag.png"): return
+	if not c.has("tag") or not is_instance_valid(c["tag"]):
+		var t := TextureRect.new()
+		t.texture = load("res://assets/scatter_tag.png")
+		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var pw: float = c["panel"].size.x
+		# al CENTRO della cella, sopra l'oggetto (un filo sotto la mezzeria)
+		t.size = Vector2(pw * 0.94, pw * 0.32)
+		t.position = Vector2(pw * 0.03, c["panel"].size.y * 0.56 - t.size.y / 2.0)
+		t.z_index = 3
+		c["panel"].add_child(t)
+		c["tag"] = t
+	c["tag"].visible = true
+
 func _set_cell(reel: int, row: int, sym: String, mult: int = 1, coin_val: int = 0) -> void:
 	var c: Dictionary = cells[reel][row]
 	c["symbol"] = sym
+	_scatter_tag(c, sym == "SCATTER")
 	if c.get("plate") != null:
 		c["plate"].visible = (sym == "COIN" and coin_val > 0)
 	_aura_cella(c, sym)
@@ -1187,6 +1215,14 @@ func _set_cell(reel: int, row: int, sym: String, mult: int = 1, coin_val: int = 
 			c["label"].text = ""
 			c["label"].position = Vector2.ZERO
 			c["label"].size = c["panel"].size
+			if sym == "SCATTER" and not ResourceLoader.exists("res://assets/scatter_tag.png"):
+				# riserva: scritta SCATTER in testo se manca la targhetta assets/scatter_tag.png
+				c["label"].text = "SCATTER"
+				c["label"].add_theme_font_size_override("font_size", 13)
+				c["label"].vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+				c["label"].add_theme_color_override("font_color", Color("#ffe9a8"))
+				c["label"].add_theme_color_override("font_outline_color", Color("#2a1505"))
+				c["label"].add_theme_constant_override("outline_size", 6)
 		return
 	c["tex"].visible = false
 	c["label"].vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -3485,6 +3521,10 @@ func _espandi_wild(reel: int, grid: Array, mults: Array, g_land: Array) -> void:
 	_scintille(centro, Color("#ff9aa8"), 14)
 	_shake(4.0, 0.22)
 	for row in ROWS:
+		# v3.76: nel Colpo la DINAMITE la lancia il Mastermind: qui resta la
+		# gemma finta atterrata, altrimenti comparirebbe prima del lancio
+		if dinamite_lanciata and String(grid[reel][row]) == "DINAMITE":
+			continue
 		_set_cell(reel, row, grid[reel][row], mults[reel][row], 0)
 		var ct: TextureRect = cells[reel][row]["tex"]
 		if ct.visible:
