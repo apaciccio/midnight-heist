@@ -4577,5 +4577,3 @@ func _sfx(name: String) -> void:
 	var stream = _find_audio(name)
 	if stream == null: return
 	_play_limited(sfx_player, stream, name)
-
-
