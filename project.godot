@@ -11,18 +11,15 @@ config_version=5
 [application]
 
 config/name="Midnight Heist"
+config/version="1.2.0"
 run/main_scene="uid://b0cr3l1jgi2gh"
 config/features=PackedStringArray("4.6", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://icon.png"
 
 [display]
 
 window/stretch/mode="canvas_items"
-window/handheld/orientation=1
-
-[input_devices]
-
-pointing/emulate_touch_from_mouse=true
+window/handheld/orientation=4
 
 [physics]
 
