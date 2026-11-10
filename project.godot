@@ -11,10 +11,14 @@ config_version=5
 [application]
 
 config/name="Midnight Heist"
-config/version="1.2.0"
+config/version="1.3.0"
 run/main_scene="uid://b0cr3l1jgi2gh"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.png"
+
+[autoload]
+
+Shop="*res://shop.gd"
 
 [display]
 
@@ -31,3 +35,7 @@ rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/GodotGooglePlayBilling/plugin.cfg")
