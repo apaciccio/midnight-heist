@@ -1,12 +1,15 @@
-# shop.gd - NEGOZIO MONETE (autoload "Shop") - v1.0
-# Uguale per tutta la serie Midnight: cambia solo SAVE_FILE se serve.
+# shop.gd - NEGOZIO MONETE (autoload "Shop") - v1.1
+# Uguale per tutta la serie Midnight (Heist, Case, Elixir).
 #
 # COME FUNZIONA
 # - Su Android con il plugin GodotGooglePlayBilling: acquisti VERI tramite
 #   Google Play (pacchetti consumabili, si possono ricomprare).
+# - Su iPhone/iPad con il plugin IOSInAppPurchase (hrk4649, StoreKit 2,
+#   v0.3.0 per Godot 4.6): acquisti VERI tramite App Store (consumabili).
 # - Su Mac/PC (editor o build desktop): modalita' PROVA, le monete arrivano
 #   subito senza pagare, per collaudare il negozio.
-# - Altrove (es. iPhone finche' non c'e' StoreKit): negozio "non disponibile".
+# - Altrove: negozio "non disponibile".
+# v1.1: aggiunto App Store (Modo.APPLE).
 #
 # LE MONETE NON SI PERDONO MAI
 # Un acquisto riuscito viene prima SCRITTO su disco (monete "da incassare"),
@@ -34,15 +37,17 @@ const PACCHETTI := [
 
 const SAVE_FILE := "user://midnight_acquisti.cfg"
 const PLUGIN := "GodotGooglePlayBilling"
+const PLUGIN_IOS := "IOSInAppPurchase"
 const MAX_TOKEN := 200   # quanti token ricordare (bastano e avanzano)
 
-enum Modo { NESSUNO, PROVA, PLAY }
+enum Modo { NESSUNO, PROVA, PLAY, APPLE }
 var modo: int = Modo.NESSUNO
 var pronto := false                    # si puo' comprare adesso?
 var prezzi := {}                       # id -> prezzo formattato dallo store
 var acquisto_in_corso := false
 
 var _client = null                     # BillingClient (solo su Android)
+var _ios = null                        # singleton IOSInAppPurchase (iPhone)
 var _da_incassare := 0
 var _token_registrati: Array = []
 var _tentativi_connessione := 0
@@ -53,6 +58,9 @@ func _ready() -> void:
 	if Engine.has_singleton(PLUGIN):
 		modo = Modo.PLAY
 		_avvia_play()
+	elif Engine.has_singleton(PLUGIN_IOS):
+		modo = Modo.APPLE
+		_avvia_apple()
 	elif OS.has_feature("editor") or OS.has_feature("pc"):
 		modo = Modo.PROVA
 		pronto = true
@@ -116,8 +124,83 @@ func compra(id: String) -> void:
 				acquisto_in_corso = true   # l'esito arriva da on_purchase_updated
 			else:
 				messaggio.emit("shop_errore")
+		Modo.APPLE:
+			if _ios == null:
+				messaggio.emit("shop_non_pronto")
+				return
+			if int(_ios.request("purchase", {"productID": id})) == 0:
+				acquisto_in_corso = true   # l'esito arriva dal segnale response
+			else:
+				messaggio.emit("shop_errore")
 		_:
 			messaggio.emit("shop_non_disp")
+
+# Ripristino (solo App Store): ripropone gli acquisti non ancora conclusi.
+# I consumabili gia' incassati non tornano (e' normale: sono monete spese).
+func ripristina() -> void:
+	if modo == Modo.APPLE and _ios != null:
+		_ios.request("proceedUnfinishedTransactions", {})
+
+
+# ---------------------------------------------------------- App Store
+# Il plugin risponde sempre col segnale response(nome, dati). Puo' arrivare
+# da un thread di StoreKit: lo gestiamo con call_deferred sul thread giusto.
+func _avvia_apple() -> void:
+	_ios = Engine.get_singleton(PLUGIN_IOS)
+	_ios.response.connect(func(nome, dati): _on_apple.call_deferred(str(nome), dati))
+	_ios.request("startUpdateTask", {})               # acquisti fatti fuori dall'app
+	_ios.request("products", {"productIDs": _ids_pacchetti()})
+	_ios.request("proceedUnfinishedTransactions", {}) # acquisti rimasti a meta'
+
+func _on_apple(nome: String, dati) -> void:
+	if not (dati is Dictionary):
+		return
+	var esito := str(dati.get("result", ""))
+	match nome:
+		"products":
+			if esito != "success":
+				await get_tree().create_timer(5.0).timeout
+				_ios.request("products", {"productIDs": _ids_pacchetti()})
+				return
+			for pr in dati.get("products", []):
+				if pr is Dictionary:
+					var pid := str(pr.get("id", ""))
+					var fp := str(pr.get("displayPrice", ""))
+					if pid != "" and fp != "":
+						prezzi[pid] = fp
+			pronto = true
+			prodotti_aggiornati.emit()
+		"purchase":
+			acquisto_in_corso = false
+			match esito:
+				"success":
+					_gestisci_apple(dati)
+				"pending":
+					messaggio.emit("shop_attesa")
+				"userCancelled":
+					messaggio.emit("shop_annullato")
+				"revoked":
+					pass   # rimborsato da Apple: niente monete
+				_:
+					messaggio.emit("shop_errore")
+
+func _gestisci_apple(d: Dictionary) -> void:
+	var pk := _pacchetto(str(d.get("productID", "")))
+	if pk.is_empty():
+		return
+	# id della transazione dal JSON di StoreKit: serve a non contarla due volte
+	var token := ""
+	var j = JSON.parse_string(str(d.get("json", "")))
+	if j is Dictionary:
+		token = str(j.get("transactionId", j.get("transactionID", "")))
+	if token == "" or token == "<null>":
+		token = "ios_%s_%s" % [str(d.get("productID", "")), str(d.get("json", "")).hash()]
+	token = "ios_" + token if not token.begins_with("ios_") else token
+	if _token_registrati.has(token):
+		return
+	var q := maxi(1, int(str(d.get("purchasedQuantity", "1"))))
+	_registra(token, int(pk["monete"]) * q)
+	messaggio.emit("shop_ok")
 
 
 # ---------------------------------------------------------- Google Play

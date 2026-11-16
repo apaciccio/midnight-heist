@@ -37,6 +37,8 @@ func _run() -> void:
 	print("acquisto prova: +", guadagno, " (atteso 50000)")
 	if guadagno != 50000: errori += 1
 	if shop.in_attesa() != 0: print("ERRORE: monete non incassate"); errori += 1
+	if pannello._esito == null: print("ERRORE: schermata esito mancante"); errori += 1
+	pannello._chiudi_esito()
 	# doppio click veloce sullo stesso acquisto: deve contare UNA volta
 	saldo0 = main.balance
 	pannello._compra("monete_10k"); pannello._compra("monete_10k")
