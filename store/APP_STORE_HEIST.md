@@ -106,8 +106,8 @@ slot,slot machine,casinò,vegas,jackpot,rapina,caveau,banca,rulli,giri,wild,offl
 ```
 Slot 5×3, 10 linee, in un caveau a mezzanotte.
 
-★ Wild espanso, giri bonus con la dinamite
-★ Cassaforte con 4 jackpot e 3 mini-giochi
+- Wild espanso, giri bonus con la dinamite
+- Cassaforte con 4 jackpot e 3 mini-giochi
 
 Gioco in italiano (gli screenshot sono in inglese). Offline, senza registrazione.
 
@@ -138,12 +138,12 @@ slot,slots,casino,vegas,jackpot,heist,vault,bank,robbery,reels,spin,wild,offline
 ```
 Midnight. A bank. A masked Mastermind. Midnight Heist is a 5-reel, 3-row slot machine with 10 paylines, set in a moonlit vault.
 
-★ EXPANDING WILD – the Mastermind's mask covers the whole reel
-★ THE HEIST – 3 safes trigger free spins: dynamite blows up symbols and multiplies your wins
-★ THE VAULT – hold & win bonus with 4 jackpots: Mini, Minor, Major and GRAND
-★ 3 MINI-GAMES – Lockpick, Diamond Cut and Perfect Robbery
-★ THE PLAN – collect the tools and unlock special bonuses
-★ Illustrated art, original soundtrack, 7 languages, autoplay and turbo
+- EXPANDING WILD – the Mastermind's mask covers the whole reel
+- THE HEIST – 3 safes trigger free spins: dynamite blows up symbols and multiplies your wins
+- THE VAULT – hold & win bonus with 4 jackpots: Mini, Minor, Major and GRAND
+- 3 MINI-GAMES – Lockpick, Diamond Cut and Perfect Robbery
+- THE PLAN – collect the tools and unlock special bonuses
+- Illustrated art, original soundtrack, 7 languages, autoplay and turbo
 
 Play anytime, offline, no sign-up.
 
@@ -174,8 +174,8 @@ tragaperras,slot,casino,vegas,jackpot,atraco,banco,bóveda,rodillos,giros,wild,o
 ```
 Slot 5×3, 10 líneas, en una cámara acorazada a medianoche.
 
-★ Wild expansivo y giros bonus con dinamita
-★ Cámara con 4 jackpots y 3 minijuegos
+- Wild expansivo y giros bonus con dinamita
+- Cámara con 4 jackpots y 3 minijuegos
 
 Juego en español (las capturas están en inglés). Sin conexión y sin registro.
 
@@ -206,8 +206,8 @@ slot,spielautomat,casino,vegas,jackpot,raub,tresor,bank,walzen,drehen,wild,offli
 ```
 5×3-Slot mit 10 Linien in einem Tresorraum um Mitternacht.
 
-★ Expanding Wild und Bonusrunden mit Dynamit
-★ Tresor mit 4 Jackpots und 3 Minispiele
+- Expanding Wild und Bonusrunden mit Dynamit
+- Tresor mit 4 Jackpots und 3 Minispiele
 
 Spiel auf Deutsch (die Screenshots sind auf Englisch). Offline, ohne Registrierung.
 
@@ -238,8 +238,8 @@ machine à sous,slot,casino,vegas,jackpot,braquage,coffre,banque,rouleaux,tours,
 ```
 Slot 5×3, 10 lignes, dans une salle des coffres à minuit.
 
-★ Wild extensible et tours bonus à la dynamite
-★ Coffre avec 4 jackpots et 3 mini-jeux
+- Wild extensible et tours bonus à la dynamite
+- Coffre avec 4 jackpots et 3 mini-jeux
 
 Jeu en français (les captures d'écran sont en anglais). Hors ligne, sans inscription.
 
@@ -270,8 +270,8 @@ slot,caça-níqueis,casino,vegas,jackpot,assalto,cofre,banco,rolos,rodadas,wild,
 ```
 Slot 5×3, 10 linhas, numa casa-forte à meia-noite.
 
-★ Wild expansivo e rodadas bónus com dinamite
-★ Cofre com 4 jackpots e 3 minijogos
+- Wild expansivo e rodadas bónus com dinamite
+- Cofre com 4 jackpots e 3 minijogos
 
 Jogo em português (as capturas de ecrã estão em inglês). Offline, sem registo.
 
@@ -302,8 +302,8 @@ Midnight Heist – Слоты казино
 ```
 Слот 5×3, 10 линий, в полночном хранилище банка.
 
-★ Расширяющийся вайлд и бонусные вращения с динамитом
-★ Сейф с 4 джекпотами и 3 мини-игры
+- Расширяющийся вайлд и бонусные вращения с динамитом
+- Сейф с 4 джекпотами и 3 мини-игры
 
 Игра на русском (скриншоты на английском). Офлайн, без регистрации.
 
